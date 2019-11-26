@@ -23,7 +23,7 @@ VPATH = $(UARM_DIR)
 
 all : kernel
 
-kernel : hello.o printprint.o crtso.o libuarm.o
+kernel : hello.o printprint.o crtso.o libuarm.o termread.o
 	$(LD) -o $@ $^ $(LDFLAGS)
 
 clean:
