@@ -5,12 +5,9 @@
 int main(void)
 {
     char t;
-    while((t = getchar()) != -1){
-        print_puts(&t);    
-    }
-    if(t == -1)
-        print_puts("error");
-    
+    while((t = getchar()) != -1)
+        print_puts(&t);
+    print_puts("\n");
 
     /* Go to sleep indefinetely */
     while (1) 

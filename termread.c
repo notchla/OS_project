@@ -6,7 +6,7 @@
 #define ST_TRANSMITTED     5
 
 #define CMD_ACK            1
-#define CMD_TRANSMIT       2
+#define CMD_RECEIVE        2
 
 #define CHAR_OFFSET        8
 #define TERM_STATUS_MASK   0xFF
@@ -31,19 +31,17 @@ char getchar()
     if (stat != ST_READY && stat != ST_RECEIVED)
         return stat;
 
-    term0_reg->recv_command = ST_RECEIVED;
+    term0_reg->recv_command = CMD_RECEIVE;
 
     while ((stat = tx_status(term0_reg)) == ST_BUSY)
         ;
 
-    c = 'c';
+    c = term0_reg->recv_status >> CHAR_OFFSET;
 
     term0_reg->recv_command = CMD_ACK;
     
-    if (stat != ST_RECEIVED)
-        return stat;
-    else if(c == '\n') 
-        return stat;
+    if (stat != ST_RECEIVED || c == '\n')
+        return -1;
     else
         return c;
 }
