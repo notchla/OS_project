@@ -4,11 +4,9 @@
 
 int main(void)
 {
-    char t;
-    while((t = getchar()) != -1)
-        print_puts(&t);
-    print_puts("\n");
-
+    char *str;
+    str = get_line();
+    print_puts(str);
     /* Go to sleep indefinetely */
     while (1) 
         WAIT();

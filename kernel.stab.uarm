@@ -1,0 +1,10 @@
+ARMA00000007 00000002
+print0_reg                       :OBJ:0x0001855C:0x00000004:LOC
+tx_status                        :FUN:0x00008098:0x0000002C:LOC
+term0_reg                        :OBJ:0x00018560:0x00000004:LOC
+tx_status                        :FUN:0x000083B4:0x0000002C:LOC
+get_line                         :FUN:0x000084A4:0x000000B8:GLB
+print_puts                       :FUN:0x00008180:0x0000005C:GLB
+print_putchar                    :FUN:0x000080C4:0x000000BC:GLB
+main                             :FUN:0x00008074:0x00000024:GLB
+getchar                          :FUN:0x000083E0:0x000000C4:GLB

@@ -15,7 +15,7 @@ static unsigned int tx_status(dtpreg_t *dp)
     return ((dp->status) & PRINTER_STATUS_MASK);
 }
 
-static int print_putchar(char c)
+int print_putchar(char c)
 {
     unsigned int stat;
 
