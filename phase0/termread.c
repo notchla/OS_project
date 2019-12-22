@@ -17,7 +17,7 @@ static termreg_t *term0_reg = (termreg_t *) DEV_REG_ADDR(IL_TERMINAL, 0);
 static char TERM_BUFF[BUFF_SIZE + 1];
 /*static dtpreg_t *print0_reg = (dtpreg_t *) DEV_REG_ADDR(IL_PRINTER, 0);*/
 
-static unsigned int tx_status(termreg_t *tp)
+static unsigned int rx_status(termreg_t *tp)
 {
     return ((tp->recv_status) & TERM_STATUS_MASK);
 }
@@ -29,13 +29,13 @@ char getchar()
 
     char c;
 
-    stat = tx_status(term0_reg);
+    stat = rx_status(term0_reg);
     if (stat != ST_READY && stat != ST_RECEIVED)
         return -1;
 
     term0_reg->recv_command = CMD_RECEIVE;
 
-    while ((stat = tx_status(term0_reg)) == ST_BUSY)
+    while ((stat = rx_status(term0_reg)) == ST_BUSY)
         ;
 
     c = term0_reg->recv_status >> CHAR_OFFSET;
@@ -51,13 +51,19 @@ char getchar()
 char* get_line(){
     int i = 0;
     char t;
-    while((t = getchar()) != '\n' && i<BUFF_SIZE){
+    while(i<BUFF_SIZE){
+        t = getchar();
+        if(t == '\n' || t == -1) {
+            break;
+        }
         TERM_BUFF[i] = t;
         i++;
     }
     if(t == '\n'){
         TERM_BUFF[i] = '\n';
         TERM_BUFF[i+1] = '\0';
+    } else if(t == -1) {
+        TERM_BUFF[i] = '\0';
     }
     else
         TERM_BUFF[BUFF_SIZE] = '\0';
