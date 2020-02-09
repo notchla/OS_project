@@ -179,3 +179,51 @@ pcb_t* outProcQ(struct list_head* head, pcb_t* p){
     else
         return NULL;
 }
+
+//ritorna 1 se la lista dei figli di p e' vuota
+int emptyChild(pcb_t* this){
+    if(this->p_child.next == NULL)//INIT_LIST_HEAD not called on this->p_child
+        return 1;
+    else
+        return list_empty(&this->p_child);
+}
+
+//inserisce p in coda alla lista dei figli di prnt;
+void insertChild(pcb_t* prnt, pcb_t* p){
+    if(prnt != NULL && p!= NULL){
+        if(prnt->p_child.next == NULL)
+            INIT_LIST_HEAD(&prnt->p_child);//inizializza la coda dei figli se non e' gia stato fatto
+        list_add_tail(&p->p_sib,&prnt->p_child);
+        p->p_parent = prnt;
+    }
+}
+
+//rimuove e ritorna il primo figlio di p;
+pcb_t* removeChild(pcb_t* p){
+    if(p!=NULL && p->p_child.next!=NULL){
+        if(!list_empty(&p->p_child)){//se p ha figli
+            pcb_t* tmp;
+            tmp = container_of(p->p_child.next,pcb_t,p_sib);//ottieni il primo figlio
+            list_del(p->p_child.next);//rimuovi il primo figlio
+            tmp->p_parent = NULL;
+            INIT_LIST_HEAD(&tmp->p_sib);//reset dei parametri del figlio che lo collegavano all'albero
+            return tmp;
+        }
+        else
+            return NULL;
+    }
+    else
+        return NULL;
+}
+//precondizione: p->parent contiene p nella lista puntata da p_child
+//rimuove p dalla lista dei figli di p->parent
+pcb_t* outChild(pcb_t* p){
+    if(p!=NULL && p->p_parent!=NULL){
+        list_del(&p->p_sib);
+        INIT_LIST_HEAD(&p->p_sib);
+        p->p_parent = NULL;//reset dei parametri di p che lo collegavano all'albero
+        return p;
+    }
+    else
+        return NULL;
+}

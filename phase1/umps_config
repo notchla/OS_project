@@ -6,10 +6,6 @@
     "bootstrap-rom": "/usr/local/share/umps2/coreboot.rom.umps",
     "clock-rate": 1,
     "devices": {
-        "printer0": {
-            "enabled": true,
-            "file": "/home/notchla/Documents/Drive/OS/project/OS_project/phase0/print0.umps"
-        },
         "terminal0": {
             "enabled": true,
             "file": "term0.umps"

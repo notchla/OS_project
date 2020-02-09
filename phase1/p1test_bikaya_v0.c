@@ -258,77 +258,77 @@ int main() {
     addokbuf(" Test insertProcQ(), removeProcQ() and emptyProcQ(): OK   \n");
     addokbuf(" Test process queues module: OK      \n");
 
-    // addokbuf(" Testing process trees...\n");
+    addokbuf(" Testing process trees...\n");
 
-    // if (!emptyChild(procp[2]))
-    //     adderrbuf("ERROR: emptyChild: unexpected FALSE   ");
+    if (!emptyChild(procp[2]))
+        adderrbuf("ERROR: emptyChild: unexpected FALSE   ");
 
-    // /* make procp[1],procp[2],procp[3], procp[7] children of procp[0] */
-    // addokbuf("Inserting...   \n");
-    // insertChild(procp[0], procp[1]);
-    // insertChild(procp[0], procp[2]);
-    // insertChild(procp[0], procp[3]);
-    // insertChild(procp[0], procp[7]);
-    // addokbuf("Inserted 2 children of pcb0  \n");
+    /* make procp[1],procp[2],procp[3], procp[7] children of procp[0] */
+    addokbuf("Inserting...   \n");
+    insertChild(procp[0], procp[1]);
+    insertChild(procp[0], procp[2]);
+    insertChild(procp[0], procp[3]);
+    insertChild(procp[0], procp[7]);
+    addokbuf("Inserted 2 children of pcb0  \n");
 
-    // /* make procp[8],procp[9] children of procp[7] */
-    // insertChild(procp[7], procp[8]);
-    // insertChild(procp[7], procp[9]);
-    // addokbuf("Inserted 2 children of pcb7  \n");
+    /* make procp[8],procp[9] children of procp[7] */
+    insertChild(procp[7], procp[8]);
+    insertChild(procp[7], procp[9]);
+    addokbuf("Inserted 2 children of pcb7  \n");
 
-    // if (emptyChild(procp[0]))
-    //     adderrbuf("ERROR: emptyChild(procp[0]): unexpected TRUE   ");
+    if (emptyChild(procp[0]))
+        adderrbuf("ERROR: emptyChild(procp[0]): unexpected TRUE   ");
 
-    // if (emptyChild(procp[7]))
-    //     adderrbuf("ERROR: emptyChild(procp[0]): unexpected TRUE   ");
+    if (emptyChild(procp[7]))
+        adderrbuf("ERROR: emptyChild(procp[0]): unexpected TRUE   ");
 
-    // /* Check outChild */
-    // q = outChild(procp[1]);
-    // if (q == NULL || q != procp[1])
-    //     adderrbuf("ERROR: outChild(procp[1]) failed ");
+    /* Check outChild */
+    q = outChild(procp[1]);
+    if (q == NULL || q != procp[1])
+        adderrbuf("ERROR: outChild(procp[1]) failed ");
 
-    // q = outChild(procp[8]);
-    // if (q == NULL || q != procp[8])
-    //     adderrbuf("ERROR: outChild(procp[8]) failed ");
+    q = outChild(procp[8]);
+    if (q == NULL || q != procp[8])
+        adderrbuf("ERROR: outChild(procp[8]) failed ");
 
-    // /* Check removeChild */
-    // q = removeChild(procp[0]);
-    // if (q == NULL || q != procp[2])
-    //     adderrbuf("ERROR: removeChild(procp[0]) failed ");
+    /* Check removeChild */
+    q = removeChild(procp[0]);
+    if (q == NULL || q != procp[2])
+        adderrbuf("ERROR: removeChild(procp[0]) failed ");
 
-    // q = removeChild(procp[7]);
-    // if (q == NULL || q != procp[9])
-    //     adderrbuf("ERROR: removeChild(procp[7]) failed ");
+    q = removeChild(procp[7]);
+    if (q == NULL || q != procp[9])
+        adderrbuf("ERROR: removeChild(procp[7]) failed ");
 
-    // q = removeChild(procp[0]);
-    // if (q == NULL || q != procp[3])
-    //     adderrbuf("ERROR: removeChild(procp[0]) failed ");
+    q = removeChild(procp[0]);
+    if (q == NULL || q != procp[3])
+        adderrbuf("ERROR: removeChild(procp[0]) failed ");
 
-    // q = removeChild(procp[0]);
-    // if (q == NULL || q != procp[7])
-    //     adderrbuf("ERROR: removeChild(procp[0]) failed ");
-
-
-    // if (removeChild(procp[0]) != NULL)
-    //     adderrbuf("ERROR: removeChild(): removes too many children   ");
-
-    // if (!emptyChild(procp[0]))
-    //     adderrbuf("ERROR: emptyChild(procp[0]): unexpected FALSE   ");
-
-    // addokbuf("Test: insertChild(), removeChild() and emptyChild() OK   \n");
-    // addokbuf("Testing process tree module OK      \n");
+    q = removeChild(procp[0]);
+    if (q == NULL || q != procp[7])
+        adderrbuf("ERROR: removeChild(procp[0]) failed ");
 
 
-    // freePcb(procp[0]);
-    // freePcb(procp[1]);
-    // freePcb(procp[2]);
-    // freePcb(procp[3]);
-    // freePcb(procp[4]);
-    // freePcb(procp[5]);
-    // freePcb(procp[6]);
-    // freePcb(procp[7]);
-    // freePcb(procp[8]);
-    // freePcb(procp[9]);
+    if (removeChild(procp[0]) != NULL)
+        adderrbuf("ERROR: removeChild(): removes too many children   ");
+
+    if (!emptyChild(procp[0]))
+        adderrbuf("ERROR: emptyChild(procp[0]): unexpected FALSE   ");
+
+    addokbuf("Test: insertChild(), removeChild() and emptyChild() OK   \n");
+    addokbuf("Testing process tree module OK      \n");
+
+
+    freePcb(procp[0]);
+    freePcb(procp[1]);
+    freePcb(procp[2]);
+    freePcb(procp[3]);
+    freePcb(procp[4]);
+    freePcb(procp[5]);
+    freePcb(procp[6]);
+    freePcb(procp[7]);
+    freePcb(procp[8]);
+    freePcb(procp[9]);
 
 
     // /* check ASL */
