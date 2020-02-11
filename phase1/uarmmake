@@ -26,7 +26,7 @@ all : kernel.core.uarm
 kernel.core.uarm : kernel
 	elf2uarm -k $<
 
-kernel : p1test_bikaya_v0.o crtso.o libuarm.o const.o listx.o pcb.o types_bikaya.o
+kernel : p1test_bikaya_v0.o crtso.o libuarm.o const.o listx.o pcb.o types_bikaya.o asl.o
 	$(LD) -o $@ $^ $(LDFLAGS)
 
 clean:

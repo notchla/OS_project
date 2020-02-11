@@ -1,83 +1,6 @@
 #include "pcb.h"
 #include "const.h"
 
-//DEBUG PRINT
-#ifdef TARGET_UMPS
-#include "umps/libumps.h"
-#include "umps/arch.h"
-#endif
-#ifdef TARGET_UARM
-#include "uarm/libuarm.h"
-#include "uarm/arch.h"
-#endif
-#define ST_READY       1
-#define ST_BUSY        3
-#define ST_TRANSMITTED 5
-
-#define CMD_ACK      1
-#define CMD_TRANSMIT 2
-
-#define CHAR_OFFSET      8
-#define TERM_STATUS_MASK 0xFF
-
-
-/******************************************************************************
- * I/O Routines to write on a terminal
- ******************************************************************************/
-
-/* This function returns the terminal transmitter status value given its address */
-static unsigned int tx_status(termreg_t *tp) {
-    return ((tp->transm_status) & TERM_STATUS_MASK);
-}
-
-/* This function prints a string on specified terminal and returns TRUE if
- * print was successful, FALSE if not   */
-unsigned int termprint_debug(char *str, unsigned int term) {
-    termreg_t *term_reg;
-
-    unsigned int stat;
-    unsigned int cmd;
-
-    unsigned int error = FALSE;
-
-    if (term < DEV_PER_INT) {
-        term_reg = (termreg_t *)DEV_REG_ADDR(IL_TERMINAL, term);
-
-        /* test device status */
-        stat = tx_status(term_reg);
-        if ((stat == ST_READY) || (stat == ST_TRANSMITTED)) {
-            /* device is available */
-
-            /* print cycle */
-            while ((*str != '\0') && (!error)) {
-                cmd                      = (*str << CHAR_OFFSET) | CMD_TRANSMIT;
-                term_reg->transm_command = cmd;
-
-                /* busy waiting */
-                while ((stat = tx_status(term_reg)) == ST_BUSY)
-                    ;
-
-                /* end of wait */
-                if (stat != ST_TRANSMITTED) {
-                    error = TRUE;
-                } else {
-                    /* move to next char */
-                    str++;
-                }
-            }
-        } else {
-            /* device is not available */
-            error = TRUE;
-        }
-    } else {
-        /* wrong terminal device number */
-        error = TRUE;
-    }
-
-    return (!error);
-}
-//END DEBUG PRINT
-
 static LIST_HEAD(pcbFree);
 
 //reference : https://stackoverflow.com/questions/18851835/create-my-own-memset-function-in-c
@@ -116,6 +39,8 @@ pcb_t* allocPcb(){
         process = container_of(pcbFree.next, pcb_t, p_next);
         list_del(pcbFree.next);
         my_memset(process, 0, sizeof(*process)); //setta ogni campo del pcb a zero
+        INIT_LIST_HEAD(&process->p_child);//serve per scrivere in maniera ricorsiva outchildblocked() nel modulo asl
+        INIT_LIST_HEAD(&process->p_sib);
         return process;
         
     }

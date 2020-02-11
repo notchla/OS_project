@@ -161,7 +161,6 @@ void adderrbuf(char *strp) {
 
 int main() {
     int i;
-
     initPcbs();
     addokbuf("Initialized Process Control Blocks   \n");
 
@@ -331,84 +330,84 @@ int main() {
     freePcb(procp[9]);
 
 
-    // /* check ASL */
-    // initASL();
-    // addokbuf("Initializing active semaphore list   \n");
+    /* check ASL */
+    initASL();
+    addokbuf("Initializing active semaphore list   \n");
 
-    // /* check removeBlocked and insertBlocked */
-    // addokbuf(" Test insertBlocked(): test #1 started  \n");
-    // for (i = 10; i < MAXPROC; i++) {
-    //     procp[i] = allocPcb();
-    //     if (insertBlocked(&sem[i], procp[i]))
-    //         adderrbuf("ERROR: insertBlocked() test#1: unexpected TRUE   ");
-    // }
+    /* check removeBlocked and insertBlocked */
+    addokbuf(" Test insertBlocked(): test #1 started  \n");
+    for (i = 10; i < MAXPROC; i++) {
+        procp[i] = allocPcb();
+        if (insertBlocked(&sem[i], procp[i]))
+            adderrbuf("ERROR: insertBlocked() test#1: unexpected TRUE   ");
+    }
 
-    // addokbuf("Test insertBlocked(): test #2 started  \n");
-    // for (i = 0; i < 10; i++) {
-    //     procp[i] = allocPcb();
-    //     if (insertBlocked(&sem[i], procp[i]))
-    //         adderrbuf("ERROR:insertBlocked() test #2: unexpected TRUE   ");
-    // }
+    addokbuf("Test insertBlocked(): test #2 started  \n");
+    for (i = 0; i < 10; i++) {
+        procp[i] = allocPcb();
+        if (insertBlocked(&sem[i], procp[i]))
+            adderrbuf("ERROR:insertBlocked() test #2: unexpected TRUE   ");
+    }
 
-    // /* check if semaphore descriptors are returned to the free list */
-    // p = removeBlocked(&sem[11]);
-    // if (insertBlocked(&sem[11], p))
-    //     adderrbuf("ERROR: removeBlocked(): fails to return to free list   ");
+    /* check if semaphore descriptors are returned to the free list */
+    p = removeBlocked(&sem[11]);
+    if (insertBlocked(&sem[11], p))
+        adderrbuf("ERROR: removeBlocked(): fails to return to free list   ");
 
-    // if (insertBlocked(&sem[MAXSEM], procp[9]) == FALSE)
-    //     adderrbuf("ERROR: insertBlocked(): inserted more than MAXPROC   ");
+    if (insertBlocked(&sem[MAXSEM], procp[9]) == FALSE)
+        adderrbuf("ERROR: insertBlocked(): inserted more than MAXPROC   ");
 
-    // addokbuf("Test removeBlocked(): test started   \n");
-    // for (i = 10; i < MAXPROC; i++) {
-    //     q = removeBlocked(&sem[i]);
-    //     if (q == NULL)
-    //         adderrbuf("ERROR: removeBlocked(): wouldn't remove   ");
-    //     if (q != procp[i])
-    //         adderrbuf("ERROR: removeBlocked(): removed wrong element   ");
-    // }
+    addokbuf("Test removeBlocked(): test started   \n");
+    for (i = 10; i < MAXPROC; i++) {
+        q = removeBlocked(&sem[i]);
+        if (q == NULL)
+            adderrbuf("ERROR: removeBlocked(): wouldn't remove   ");
+        if (q != procp[i])
+            adderrbuf("ERROR: removeBlocked(): removed wrong element   ");
+    }
 
-    // if (removeBlocked(&sem[11]) != NULL)
-    //     adderrbuf("ERROR: removeBlocked(): removed nonexistent blocked proc   ");
+    if (removeBlocked(&sem[11]) != NULL)
+        adderrbuf("ERROR: removeBlocked(): removed nonexistent blocked proc   ");
 
-    // addokbuf("Test insertBlocked() and removeBlocked() ok   \n");
+    addokbuf("Test insertBlocked() and removeBlocked() ok   \n");
 
-    // if (headBlocked(&sem[11]) != NULL)
-    //     adderrbuf("ERROR: headBlocked(): nonNULL for a nonexistent queue   ");
+    if (headBlocked(&sem[11]) != NULL)
+        adderrbuf("ERROR: headBlocked(): nonNULL for a nonexistent queue   ");
 
-    // if ((q = headBlocked(&sem[9])) == NULL)
-    //     adderrbuf("ERROR: headBlocked(1): NULL for an existent queue   ");
-    // if (q != procp[9])
-    //     adderrbuf("ERROR: headBlocked(1): wrong process returned   ");
-    // p = outBlocked(q);
-    // if (p != q)
-    //     adderrbuf("ERROR: outBlocked(1): couldn't remove from valid queue   ");
+    if ((q = headBlocked(&sem[9])) == NULL)
+        adderrbuf("ERROR: headBlocked(1): NULL for an existent queue   ");
+    if (q != procp[9])
+        adderrbuf("ERROR: headBlocked(1): wrong process returned   ");
+    p = outBlocked(q);
+    if (p != q)
+        adderrbuf("ERROR: outBlocked(1): couldn't remove from valid queue   ");
 
-    // /* Creating a 2-layer tree */
-    // insertChild(procp[0], procp[1]);
-    // insertChild(procp[0], procp[2]);
-    // insertChild(procp[0], procp[3]);
-    // insertChild(procp[3], procp[4]);
+    /* Creating a 2-layer tree */
+    insertChild(procp[0], procp[1]);
+    insertChild(procp[0], procp[2]);
+    insertChild(procp[0], procp[3]);
+    insertChild(procp[3], procp[4]);
 
-    // /* Testing outChildBlocked */
-    // outChildBlocked(procp[0]);
+    /* Testing outChildBlocked */
+    outChildBlocked(procp[0]);
 
-    // if (headBlocked(&sem[0]) != NULL)
-    //     adderrbuf("ERROR: outChildBlocked(): nonNULL for a nonexistent queue (0)  ");
-    // if (headBlocked(&sem[1]) != NULL)
-    //     adderrbuf("ERROR: outChildBlocked(): nonNULL for a nonexistent queue (1)  ");
-    // if (headBlocked(&sem[2]) != NULL)
-    //     adderrbuf("ERROR: outChildBlocked(): nonNULL for a nonexistent queue  (2) ");
-    // if (headBlocked(&sem[3]) != NULL)
-    //     adderrbuf("ERROR: outChildBlocked(): nonNULL for a nonexistent queue (3)  ");
-    // if (headBlocked(&sem[4]) != NULL)
-    //     adderrbuf("ERROR: outChildBlocked(): nonNULL for a nonexistent queue (4)  ");
-    // if (headBlocked(&sem[5]) == NULL)
-    //     adderrbuf("ERROR: outChildBlocked(): NULL for an existent queue  (5) ");
+    if (headBlocked(&sem[0]) != NULL)
+        adderrbuf("ERROR: outChildBlocked(): nonNULL for a nonexistent queue (0)  ");
+    if (headBlocked(&sem[1]) != NULL)
+        adderrbuf("ERROR: outChildBlocked(): nonNULL for a nonexistent queue (1)  ");
+    if (headBlocked(&sem[2]) != NULL)
+        adderrbuf("ERROR: outChildBlocked(): nonNULL for a nonexistent queue  (2) ");
+    if (headBlocked(&sem[3]) != NULL)
+        adderrbuf("ERROR: outChildBlocked(): nonNULL for a nonexistent queue (3)  ");
+    if (headBlocked(&sem[4]) != NULL)
+        adderrbuf("ERROR: outChildBlocked(): nonNULL for a nonexistent queue (4)  ");
+    if (headBlocked(&sem[5]) == NULL)
+        adderrbuf("ERROR: outChildBlocked(): NULL for an existent queue  (5) ");
 
-    // addokbuf("Test headBlocked() and outBlocked(): OK   \n");
+    addokbuf("Test headBlocked() and outBlocked(): OK   \n");
 
-    // addokbuf("ASL module OK   \n");
-    // addokbuf("So Long and Thanks for All the Fish\n");
+    addokbuf("ASL module OK   \n");
+    addokbuf("So Long and Thanks for All the Fish\n");
 
     return 0;
 }
