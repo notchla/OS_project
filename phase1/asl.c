@@ -67,15 +67,14 @@ void insertSem(semd_t* semaphore){
 int insertBlocked(int* key, pcb_t* p){
     if(key == NULL || p == NULL)
         return 0;
-    semd_t* ptr;
-    list_for_each_entry(ptr,&ASL,s_next){
-        if(ptr->s_key == key){
-            if(ptr->s_procQ.next == NULL)
-                INIT_LIST_HEAD(&ptr->s_procQ);
-            p->p_semkey = key;
-            list_add_tail(&p->p_next,&ptr->s_procQ);
-            return 0;
-        }
+
+    semd_t* ptr = getSemd(key);
+    if (ptr!=NULL){
+        if(ptr->s_procQ.next == NULL)
+            INIT_LIST_HEAD(&ptr->s_procQ);
+        p->p_semkey = key;
+        list_add_tail(&p->p_next,&ptr->s_procQ);
+        return 0;
     }
     //se un semaforo con s_key = key non e' presente in asl,ne allochiamo uno
     semd_t* semaphore = allocSemd();
@@ -94,24 +93,25 @@ int insertBlocked(int* key, pcb_t* p){
 pcb_t* removeBlocked(int* key){
     if(key == NULL)
         return NULL;
-    semd_t* ptr;
-    list_for_each_entry(ptr, &ASL, s_next){
-        if(ptr->s_key == key){
-            if(!list_empty(&ptr->s_procQ)){
-                pcb_t* removed = container_of(ptr->s_procQ.next, pcb_t, p_next);
-                list_del(ptr->s_procQ.next);
-                if(list_empty(&ptr->s_procQ)){
-                    list_del(&ptr->s_next);
-                    ptr->s_key = NULL;
-                    INIT_LIST_HEAD(&ptr->s_next);
-                    INIT_LIST_HEAD(&ptr->s_procQ);
-                    list_add_tail(&ptr->s_next,&semdFree);
-                }
-                return removed;
+
+    semd_t* ptr = getSemd(key);
+
+    if(ptr!=NULL){
+        if(!list_empty(&ptr->s_procQ)){
+            pcb_t* removed = container_of(ptr->s_procQ.next, pcb_t, p_next);
+            list_del(ptr->s_procQ.next);
+            if(list_empty(&ptr->s_procQ)){
+                list_del(&ptr->s_next);
+                ptr->s_key = NULL;
+                INIT_LIST_HEAD(&ptr->s_next);
+                INIT_LIST_HEAD(&ptr->s_procQ);
+                list_add_tail(&ptr->s_next,&semdFree);
             }
-            else
-                return NULL;
+            return removed;
         }
+        else
+            return NULL;
+
     }
     return NULL;
 }
@@ -119,25 +119,23 @@ pcb_t* removeBlocked(int* key){
 pcb_t* outBlocked(pcb_t* p){
     if(p == NULL || p->p_semkey == NULL)
         return NULL;
-    semd_t* ptr;
-    list_for_each_entry(ptr, &ASL, s_next){//cicla sui semafori attivi
-        if(ptr->s_key == p->p_semkey){
-            pcb_t* temp;
-            list_for_each_entry(temp,&ptr->s_procQ,p_next){//cicla sui processi bloccati dal semaforo con s_key == p->semkey
-                if(temp == p){
-                    list_del(&temp->p_next);//rimuove il pcb dalla coda dei processi bloccati
-                    if(list_empty(&ptr->s_procQ)){//se la coda e' vuota elimino il semaforo e lo restituisco a semfree
-                        list_del(&ptr->s_next);
-                        ptr->s_key = NULL;
-                        INIT_LIST_HEAD(&ptr->s_next);
-                        INIT_LIST_HEAD(&ptr->s_procQ);
-                        list_add_tail(&ptr->s_next,&semdFree);
-                    }
-                    return p;
+    semd_t* ptr = getSemd(p->p_semkey);
+    if(ptr!=NULL){
+        pcb_t* temp;
+        list_for_each_entry(temp,&ptr->s_procQ,p_next){//cicla sui processi bloccati dal semaforo con s_key == p->semkey
+            if(temp == p){
+                list_del(&temp->p_next);//rimuove il pcb dalla coda dei processi bloccati
+                if(list_empty(&ptr->s_procQ)){//se la coda e' vuota elimino il semaforo e lo restituisco a semfree
+                    list_del(&ptr->s_next);
+                    ptr->s_key = NULL;
+                    INIT_LIST_HEAD(&ptr->s_next);
+                    INIT_LIST_HEAD(&ptr->s_procQ);
+                    list_add_tail(&ptr->s_next,&semdFree);
                 }
+                return p;
             }
-            return NULL;
         }
+        return NULL;
     }
     return NULL;
 }
@@ -145,13 +143,11 @@ pcb_t* outBlocked(pcb_t* p){
 pcb_t* headBlocked(int* key){
     if(key == NULL)
         return NULL;
-    semd_t* ptr;
-    list_for_each_entry(ptr,&ASL,s_next){
-        if(ptr->s_key == key){
-            if(list_empty(&ptr->s_procQ))//se la lista dei processi bloccati da ptr e' vuota ritorna null
-                return NULL;
-            return container_of(ptr->s_procQ.next, pcb_t, p_next);//ritorna il primo pcb bloccato dal semaforo
-        }
+    semd_t* ptr = getSemd(key);
+    if(ptr!=NULL){
+        if(list_empty(&ptr->s_procQ))//se la lista dei processi bloccati da ptr e' vuota ritorna null
+            return NULL;
+        return container_of(ptr->s_procQ.next, pcb_t, p_next);//ritorna il primo pcb bloccato dal semaforo
     }
     return NULL;
 }
