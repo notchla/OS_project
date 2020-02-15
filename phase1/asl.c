@@ -56,7 +56,7 @@ void insertSem(semd_t* semaphore){
         return;
     semd_t* ptr;
     list_for_each_entry(ptr, &ASL, s_next){
-        if(*semaphore->s_key > *ptr->s_key){
+        if(semaphore->s_key > ptr->s_key){
             list_add(&semaphore->s_next, ptr->s_next.prev);
             return;
         }
@@ -73,6 +73,8 @@ int insertBlocked(int* key, pcb_t* p){
         if(ptr->s_procQ.next == NULL)
             INIT_LIST_HEAD(&ptr->s_procQ);
         p->p_semkey = key;
+        if(p->p_next.next != NULL)//controllo su pcb per vedere se appartiene gia ad una lista.se pcb appartiene ad una lista chiamiamo list_del su p->next per non invalidare la lista a cui apparteneva
+            list_del(&p->p_next);
         list_add_tail(&p->p_next,&ptr->s_procQ);
         return 0;
     }
@@ -83,6 +85,8 @@ int insertBlocked(int* key, pcb_t* p){
         INIT_LIST_HEAD(&semaphore->s_procQ);
         insertSem(semaphore);
         p->p_semkey = key;
+        if(p->p_next.next != NULL)//controllo su pcb per vedere se appartiene gia ad una lista.se pcb appartiene ad una lista chiamiamo list_del su p->next per non invalidare la lista a cui apparteneva
+            list_del(&p->p_next);
         list_add_tail(&p->p_next,&semaphore->s_procQ);
         return 0;
     }
