@@ -1,7 +1,7 @@
 #include "asl.h"
 #include "const.h"
 
-static LIST_HEAD(semdFree);
+static LIST_HEAD(semdFree);//lista dei semafori liberi
 static LIST_HEAD(ASL);//lista dei semafori attivi
 
 //reference : https://stackoverflow.com/questions/18851835/create-my-own-memset-function-in-c
@@ -16,6 +16,7 @@ void *my_memset_sem(void *struct_ptr, int c, int len){
     return struct_ptr;
 }
 
+//inizializza l' array dei semafori e inserisci i semafori nella lista dei semafori liberi
 void initASL(){
     static semd_t semdFree_table[MAXPROC];
     for (int i = 0; i < MAXPROC; i++)
@@ -26,6 +27,7 @@ void initASL(){
     
 }
 
+//ritorna il semaforo con chiave key
 semd_t* getSemd(int* key){
     if(key == NULL)
         return NULL;
@@ -37,6 +39,7 @@ semd_t* getSemd(int* key){
     return NULL;
 }
 
+//se semdfree non e' libera ritorna il primo semaforo libero nella lista con tutti i suoi valori inizializati a zero
 semd_t* allocSemd(){
     if(list_empty(&semdFree))
         return NULL;
@@ -64,6 +67,7 @@ void insertSem(semd_t* semaphore){
     list_add_tail(&semaphore->s_next,&ASL);//semaphore ha priorita minima
 }
 
+//inserisci il pcb puntato da p in coda alla coda dei processi bloccati dal semaforo con chiave pari a key
 int insertBlocked(int* key, pcb_t* p){
     if(key == NULL || p == NULL)
         return 0;
@@ -94,6 +98,7 @@ int insertBlocked(int* key, pcb_t* p){
         return 1;//semaphore non puo essere allocato
 }
 
+//rimuove il primo pcd bloccato dal semaforo con coda pari a key, se la coda diventa vuota il semaforo viene rimosso da asl e inserito in semdfree
 pcb_t* removeBlocked(int* key){
     if(key == NULL)
         return NULL;
@@ -120,6 +125,7 @@ pcb_t* removeBlocked(int* key){
     return NULL;
 }
 
+//rimuove il processo puntato da p dal suo semaforo, se la coda diventa vuota il semaforo viene rimmosso da asl e inserito in semdfree. se il semaforo indicato da semkey non contiene il processo ritorna null
 pcb_t* outBlocked(pcb_t* p){
     if(p == NULL || p->p_semkey == NULL)
         return NULL;
@@ -143,7 +149,7 @@ pcb_t* outBlocked(pcb_t* p){
     }
     return NULL;
 }
-
+//ritorna il puntatore al primo processo puntato dal semaforo con chiave pari a key
 pcb_t* headBlocked(int* key){
     if(key == NULL)
         return NULL;
@@ -156,6 +162,7 @@ pcb_t* headBlocked(int* key){
     return NULL;
 }
 
+//rimozione di p e di tutti i processi radicati in p dai propri semafori
 void outChildBlocked(pcb_t* p){
     if(p == NULL)
         return;
