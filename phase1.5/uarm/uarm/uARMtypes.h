@@ -69,7 +69,7 @@ typedef struct{
     unsigned int sp;    //r13
     unsigned int lr;    //r14
     unsigned int pc;    //r15
-    unsigned int cpsr;
+    unsigned int cpsr;  //status register
     unsigned int CP15_Control;
     unsigned int CP15_EntryHi;
     unsigned int CP15_Cause;

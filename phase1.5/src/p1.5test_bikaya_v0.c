@@ -29,9 +29,9 @@
 #define SYS3       3
 #define STEPS      6
 
-volatile int test1_baton[STEPS + 1] = {0};
-volatile int test2_baton[STEPS + 1] = {0};
-volatile int test3_baton[STEPS + 1] = {0};
+volatile static int test1_baton[STEPS + 1] = {0};
+volatile static int test2_baton[STEPS + 1] = {0};
+volatile static int test3_baton[STEPS + 1] = {0};
 
 typedef unsigned int devreg;
 
@@ -57,7 +57,7 @@ static unsigned int tx_status(termreg_t *tp) {
     return ((tp->transm_status) & TERM_STATUS_MASK);
 }
 
-void termprint(char *str) {
+static void termprint(char *str) {
     while (*str) {
         unsigned int stat = tx_status(term0_reg);
         if (stat != ST_READY && stat != ST_TRANSMITTED)
@@ -81,7 +81,7 @@ void termprint(char *str) {
 #define termprint(str) tprint(str);
 #endif
 
-char *toprint[] = {
+static char *toprint[] = {
     "1                        \n",  "2          _nnnn_        \n",  "3         dGGGGMMb       \n",
     "4        @p~qp~~qMb      \n",  "5        M|@||@) M|      \n",  "6        @,----.JM|      \n",
     "7       JS^\\__/  qKL     \n", "8      dZP        qKRb   \n",  "9     dZP          qKKb  \n",
@@ -90,7 +90,7 @@ char *toprint[] = {
     "16\\____   )MMMMMP|   .'  \n", "17     `-'       `--'    \n",  "18                       \n",
 };
 
-void test1() {
+static void test1() {
     int i = 0;
     termprint("Entering test1!\n");
     for (i = 0; i < STEPS; i++) {
@@ -108,7 +108,7 @@ void test1() {
     SYSCALL(SYS3, 0, 0, 0);
 }
 
-void test2() {
+static void test2() {
     int i = 0;
     termprint("Entering test2!\n");
 
@@ -128,7 +128,7 @@ void test2() {
     SYSCALL(SYS3, 0, 0, 0);
 }
 
-void test3() {
+static void test3() {
     int i = 0;
     termprint("Entering test3!\n");
 

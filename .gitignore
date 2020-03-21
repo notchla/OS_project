@@ -2,3 +2,4 @@
 *.uarm
 *.umps
 kernel*
+.sconsign.dblite
