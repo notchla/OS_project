@@ -1,0 +1,26 @@
+{
+    "boot": {
+        "core-file": "build/umps/kernel.core.umps",
+        "load-core-file": true
+    },
+    "bootstrap-rom": "/usr/local/share/umps2/coreboot.rom.umps",
+    "clock-rate": 1,
+    "devices": {
+        "printer0": {
+            "enabled": true,
+            "file": "print0.umps"
+        },
+        "terminal0": {
+            "enabled": true,
+            "file": "term0.umps"
+        }
+    },
+    "execution-rom": "/usr/local/share/umps2/exec.rom.umps",
+    "num-processors": 1,
+    "num-ram-frames": 64,
+    "symbol-table": {
+        "asid": 64,
+        "file": "build/umps/kernel.stab.umps"
+    },
+    "tlb-size": 16
+}
