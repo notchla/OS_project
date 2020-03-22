@@ -5,10 +5,7 @@
 #include "types_bikaya.h"
 #include "p1.5test_bikaya_v0.c"
 #include "system.h"   //include target libs
-
-struct list_head readyQueue;
-pcb_t* currentProcess;
-int processCount = 0;
+#include "scheduler.h"
 
 extern void test1();
 extern void test2();
@@ -33,22 +30,22 @@ void NEWAREA(state_t* area, unsigned int address, unsigned int handler) {
 #endif
 
 void NEWPROCESS(memaddr functionAddr) {
-  currentProcess = allocPcb();
-  ++processCount;
-  unsigned int addr = (RAMTOP - FRAME_SIZE*processCount);
-  currentProcess-> priority = processCount;
+  pcb_t* tempProcess = allocPcb();
+  incProcCount();
+  unsigned int addr = (RAMTOP - FRAME_SIZE*getProcCount());
+  tempProcess-> priority = getProcCount();
   #if TARGET_UMPS
-  currentProcess-> p_s.reg_sp = addr;
-  currentProcess-> p_s.status = ALLOFF | TIMERON | IEON;
-  currentProcess-> p_s.pc_epc = functionAddr;
-  currentProcess-> p_s.reg_t9 = functionAddr;
+  tempProcess-> p_s.reg_sp = addr;
+  tempProcess-> p_s.status = ALLOFF | TIMERON | IEON;
+  tempProcess-> p_s.pc_epc = functionAddr;
+  tempProcess-> p_s.reg_t9 = functionAddr;
   #elif TARGET_UARM
-  currentProcess-> p_s.sp = addr;
-  currentProcess-> p_s.cpsr = CP15_DISABLE_VM(STATUS_ENABLE_TIMER(STATUS_ENABLE_INT(STATUS_SYS_MODE)));
-  currentProcess-> p_s.pc = functionAddr;
-  currentProcess-> p_s.ip = functionAddr;
+  tempProcess-> p_s.sp = addr;
+  tempProcess-> p_s.cpsr = CP15_DISABLE_VM(STATUS_ENABLE_TIMER(STATUS_ENABLE_INT(STATUS_SYS_MODE)));
+  tempProcess-> p_s.pc = functionAddr;
+  tempProcess-> p_s.ip = functionAddr;
   #endif
-  insertProcQ(&readyQueue, currentProcess);
+  schedInsertProc(tempProcess);
 }
 
 void initROM() {
@@ -80,8 +77,6 @@ void initROM() {
 void initData() {
   initPcbs();
   //initASL();
-  mkEmptyProcQ(&readyQueue);
-
 }
 
 void initialProcess() {
