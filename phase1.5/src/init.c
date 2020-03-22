@@ -12,7 +12,8 @@ extern void test2();
 extern void test3();
 
 #if TARGET_UMPS
-void NEWAREA(state_t* area, unsigned int address, unsigned int handler) {
+void NEWAREA(unsigned int address, unsigned int handler) {
+  state_t* area;
   area = (state_t*) address;
   area-> reg_sp = RAMTOP;
   area-> status = ALLOFF | IEMASK;
@@ -20,7 +21,8 @@ void NEWAREA(state_t* area, unsigned int address, unsigned int handler) {
   area-> reg_t9 = handler;
 }
 #elif TARGET_UARM
-void NEWAREA(state_t* area, unsigned int address, unsigned int handler) {
+void NEWAREA(unsigned int address, unsigned int handler) {
+  state_t* area;
   area = (state_t*) address;
   area-> sp = RAMTOP;
   area-> cpsr = CP15_DISABLE_VM(STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
@@ -45,32 +47,29 @@ void NEWPROCESS(memaddr functionAddr) {
   tempProcess-> p_s.pc = functionAddr;
   tempProcess-> p_s.ip = functionAddr;
   #endif
-  schedInsertProc(tempProcess);
+  schedInsertProc(tempProcess); //schedule the newly created process
 }
 
 void initROM() {
   #if TARGET_UMPS
-
-  state_t* newArea;
   //syscall
-  NEWAREA(newArea, SYS_NEWAREA, (memaddr) syscallHandler);
+  NEWAREA(SYS_NEWAREA, (memaddr) syscallHandler);
   //traps
-  NEWAREA(newArea, TRAP_NEWAREA, (memaddr) trapHandler);
+  NEWAREA(TRAP_NEWAREA, (memaddr) trapHandler);
   //TLB
-  NEWAREA(newArea, TBL_NEWAREA, (memaddr) TLBManager);
+  NEWAREA(TBL_NEWAREA, (memaddr) TLBManager);
   //interrupts
-  NEWAREA(newArea, IE_NEWAREA, (memaddr) interruptHandler);
+  NEWAREA(IE_NEWAREA, (memaddr) interruptHandler);
 
   #elif TARGET_UARM
-  state_t* newArea;
   //syscall
-  NEWAREA(newArea, SYSBK_NEWAREA, (memaddr) syscallHandler);
+  NEWAREA(SYSBK_NEWAREA, (memaddr) syscallHandler);
   //traps
-  NEWAREA(newArea, PGMTRAP_NEWAREA, (memaddr) trapHandler);
+  NEWAREA(PGMTRAP_NEWAREA, (memaddr) trapHandler);
   //TLB
-  NEWAREA(newArea, TLB_NEWAREA, (memaddr) TLBManager);
+  NEWAREA(TLB_NEWAREA, (memaddr) TLBManager);
   //interrupts
-  NEWAREA(newArea, INT_NEWAREA, (memaddr) interruptHandler);
+  NEWAREA(INT_NEWAREA, (memaddr) interruptHandler);
   #endif
 }
 
@@ -93,7 +92,7 @@ int main() {
   //load the init processes
   initialProcess();
 
-  //scheduler();
+  scheduler();
 
   return 0;
 }

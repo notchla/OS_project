@@ -22,7 +22,7 @@ void initPcbs(){
     {
         list_add_tail(&pcbFree_table[i].p_next, &pcbFree);
     }
-    
+
 }
 
 //aggiunge il pcb alla lista libera
@@ -42,7 +42,7 @@ pcb_t* allocPcb(){
         INIT_LIST_HEAD(&process->p_child);//serve per scrivere in maniera ricorsiva outchildblocked() nel modulo asl
         INIT_LIST_HEAD(&process->p_sib);
         return process;
-        
+
     }
 }
 

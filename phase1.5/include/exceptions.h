@@ -7,4 +7,7 @@ void syscallHandler();
 
 void TLBManager();
 
+//syscalls
+void kill();
+
 #endif

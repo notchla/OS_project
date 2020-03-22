@@ -1,6 +1,6 @@
 #ifdef TARGET_UMPS
-#include "umps/umpsConst.h"
 #include "umps/libumps.h"
+#include "umps/umpsConst.h"
 #include "umps/arch.h"
 #include "umps/types.h"
 #endif
