@@ -65,14 +65,14 @@ typedef struct{
     unsigned int v6;    //r9
     unsigned int sl;    //r10
     unsigned int fp;    //r11
-    unsigned int ip;    //r12
+    unsigned int ip;    //r12 instruction pointer
     unsigned int sp;    //r13
     unsigned int lr;    //r14
-    unsigned int pc;    //r15
+    unsigned int pc;    //r15 program counter
     unsigned int cpsr;  //status register
-    unsigned int CP15_Control;
+    unsigned int CP15_Control;    //coprocessor program status register
     unsigned int CP15_EntryHi;
-    unsigned int CP15_Cause;
+    unsigned int CP15_Cause;  //same as cause register in umps
     unsigned int TOD_Hi;
     unsigned int TOD_Low;
 }state_t;

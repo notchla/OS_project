@@ -1,5 +1,4 @@
 #include "exceptions.h"
-#include "consts_bikaya.h"
 #include "scheduler.h"
 #include "pcb.h"
 #include "listx.h"
@@ -10,23 +9,26 @@ void trapHandler() {
 }
 
 void syscallHandler() {
-  state_t* callerState = (state_t*) getCAUSE(); // = (state_t) SYS_NEWAREA (or SYSBK_NEWAREA)
+  state_t* callerState = NULL;
   int syscallRequest = 0;
   /*need to increment program counter to next instruction, otherwise
     syscall loop (4 is word size) */
   #if TARGET_UMPS
+  callerState = (state_t*) SYS_OLDAREA;
   //not in kernel mode
   if(callerState-> status & UMODE != ALLOFF) {
     PANIC();
   }
   syscallRequest = callerState-> reg_a0;
-  callerState-> pc_epc = callerState-> pc_epc + 4;
+  callerState-> pc_epc = callerState-> pc_epc + WORD_SIZE;
   #elif TARGET_UARM
-  if(callerState-> cpsr & STATUS_SYS_MODE == STATUS_NULL) {
+  callerState = (state_t*) SYSBK_OLDAREA;
+  if((callerState-> cpsr & STATUS_SYS_MODE) == STATUS_NULL) {
+    tprint("1");
     PANIC();
   }
   syscallRequest = callerState-> CP15_Cause;
-  callerState-> pc = callerState-> pc + 4;
+  callerState-> pc = callerState-> pc + WORD_SIZE;
   #endif
   switch(syscallRequest) {
     case CREATE_PROCESS:  //to be implemented

@@ -25,9 +25,10 @@ void NEWAREA(unsigned int address, unsigned int handler) {
   state_t* area;
   area = (state_t*) address;
   area-> sp = RAMTOP;
-  area-> cpsr = CP15_DISABLE_VM(STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE));
+  area-> cpsr = STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE);
   area-> pc = handler;
   area-> ip = handler;
+  area-> CP15_Control = CP15_CONTROL_NULL;  //VM disabled
 }
 #endif
 
@@ -43,9 +44,10 @@ void NEWPROCESS(memaddr functionAddr) {
   tempProcess-> p_s.reg_t9 = functionAddr;
   #elif TARGET_UARM
   tempProcess-> p_s.sp = addr;
-  tempProcess-> p_s.cpsr = CP15_DISABLE_VM(STATUS_ENABLE_TIMER(STATUS_ENABLE_INT(STATUS_SYS_MODE)));
+  tempProcess-> p_s.cpsr = STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE);  //both interrupts and local timer
   tempProcess-> p_s.pc = functionAddr;
   tempProcess-> p_s.ip = functionAddr;
+  tempProcess-> p_s.CP15_Control = CP15_CONTROL_NULL;  //VM disabled
   #endif
   schedInsertProc(tempProcess); //schedule the newly created process
 }
@@ -57,7 +59,7 @@ void initROM() {
   //traps
   NEWAREA(TRAP_NEWAREA, (memaddr) trapHandler);
   //TLB
-  NEWAREA(TBL_NEWAREA, (memaddr) TLBManager);
+  NEWAREA(TLB_NEWAREA, (memaddr) TLBManager);
   //interrupts
   NEWAREA(IE_NEWAREA, (memaddr) interruptHandler);
 

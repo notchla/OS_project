@@ -10,3 +10,4 @@
 #include "uarm/uARMconst.h"
 #include "uarm/uARMtypes.h"
 #endif
+#include "consts_bikaya.h"

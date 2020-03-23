@@ -1,8 +1,8 @@
 #include "scheduler.h"
 #include "pcb.h"
-#include "consts_bikaya.h"
 #include "system.h"
 #include "listx.h"
+
 
 struct list_head readyQueue = LIST_HEAD_INIT(readyQueue);
 pcb_t* currentProcess = NULL;
@@ -45,20 +45,21 @@ void scheduler(){
     }
     //nothing to do
     if ((processCount > 0) && (softBlockCount > 0)) {
-      WAIT();
       #if TARGET_UMPS
       setSTATUS(getSTATUS() | IEON | IECON & ~(IEMASK) & ~(UMODE)); //TODO: chiedere
       #elif TARGET_UARM
       setSTATUS(STATUS_ENABLE_INT(
         STATUS_ALL_INT_ENABLE(getSTATUS() | STATUS_SYS_MODE)));
-      #endif
+        #endif
+      WAIT();
     }
   }
   else {
     currentProcess = removeProcQ(&readyQueue);
+    //order of these operations is important
+    aging();
+    setTIMER(TIME_SLICE);
     //load currentProcess CPU status
     LDST((&(currentProcess-> p_s)));
-    setTIMER(TIME_SLICE);
-    aging();
   }
 }
