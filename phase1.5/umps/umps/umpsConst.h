@@ -16,7 +16,8 @@
 #define IEON              0x00000004 //turn on interrupts
 #define IECON             0x00000001 //current interrupt on
 #define UMODE             0x00000002 //current user mode on
-#define IEMASK            0x0000FF00 //interrupt mask on
+#define IEMASK            0x0000FF00 //interrupt mask off (catching all interrupts)
+#define TIMERMASK         0x0000F900 //catches only timer interrupts
 #define VMON              0x01000000 //virtual memory on
 #define TIMERON           0x08000000 //local timer on
 
