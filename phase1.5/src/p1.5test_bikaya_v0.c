@@ -93,6 +93,7 @@ static char *toprint[] = {
 static void test1() {
     int i = 0;
     termprint("Entering test1!\n");
+    
     for (i = 0; i < STEPS; i++) {
         while (test3_baton[i] == 0)
             ;
@@ -111,7 +112,7 @@ static void test1() {
 static void test2() {
     int i = 0;
     termprint("Entering test2!\n");
-
+    
 
     for (i = 0; i < STEPS; i++) {
         while (test1_baton[i] == 0)
@@ -131,7 +132,7 @@ static void test2() {
 static void test3() {
     int i = 0;
     termprint("Entering test3!\n");
-
+    
     test3_baton[0] = 1;
     for (i = 0; i < STEPS; i++) {
         while (test2_baton[i] == 0)

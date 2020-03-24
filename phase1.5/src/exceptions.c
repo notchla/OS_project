@@ -24,7 +24,7 @@ void syscallHandler() {
   #elif TARGET_UARM
   callerState = (state_t*) SYSBK_OLDAREA;
   if((callerState-> cpsr & STATUS_SYS_MODE) == STATUS_NULL) {
-    tprint("1");
+    // tprint("1");
     PANIC();
   }
   syscallRequest = callerState-> CP15_Cause;

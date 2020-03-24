@@ -16,7 +16,7 @@ void NEWAREA(unsigned int address, unsigned int handler) {
   state_t* area;
   area = (state_t*) address;
   area-> reg_sp = RAMTOP;
-  area-> status = ALLOFF | IEMASK;
+  area-> status = ALLOFF;
   area-> pc_epc = handler;
   area-> reg_t9 = handler;
 }
@@ -39,12 +39,14 @@ void NEWPROCESS(memaddr functionAddr) {
   tempProcess-> priority = getProcCount();
   #if TARGET_UMPS
   tempProcess-> p_s.reg_sp = addr;
-  tempProcess-> p_s.status = ALLOFF | TIMERON | IEON;
+  tempProcess-> p_s.status = ALLOFF | TIMERON | IEON | IEMASK;
+  // tempProcess-> p_s.status = ALLOFF | TIMERON | IEON;//test
   tempProcess-> p_s.pc_epc = functionAddr;
   tempProcess-> p_s.reg_t9 = functionAddr;
   #elif TARGET_UARM
   tempProcess-> p_s.sp = addr;
-  tempProcess-> p_s.cpsr = STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE);  //both interrupts and local timer
+  // tempProcess-> p_s.cpsr = STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE);  //both interrupts and local timer
+  tempProcess-> p_s.cpsr = ;
   tempProcess-> p_s.pc = functionAddr;
   tempProcess-> p_s.ip = functionAddr;
   tempProcess-> p_s.CP15_Control = CP15_CONTROL_NULL;  //VM disabled
