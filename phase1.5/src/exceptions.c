@@ -3,6 +3,7 @@
 #include "pcb.h"
 #include "listx.h"
 #include "system.h"
+#include "p1.5test_bikaya_v0.c"
 
 void trapHandler() {
   //stub function, to be implemented
@@ -65,6 +66,7 @@ void kill() {
       }
     }
     outChild(currentProcess);
+    freePcb(currentProcess);
   } else {
     outChild(currentProcess);
     freePcb(currentProcess);

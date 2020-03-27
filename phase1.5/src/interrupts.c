@@ -25,10 +25,17 @@ void interruptHandler() {
   currentProcess-> p_s.pc = currentProcess-> p_s.pc - WORD_SIZE;
   cause = (cause >> 8) & CAUSE_MASK;
   #endif
-  if (cause == INTERVALTIME_INT) {
-    termprint("test interrupts");
+  // if (cause == INTERVALTIME_INT) {
+  //   termprint("test interrupts\n");
+  //   mymemcpy(&currentProcess->p_s, old_status, sizeof(*old_status));
+  //   schedInsertProc(currentProcess);
+  //   scheduler();
+  // }
+  // else{
+  //   static termreg_t *term0_reg = (termreg_t *)DEV_REG_ADDR(IL_TERMINAL, 0);
+  //   term0_reg->transm_command = CMD_ACK;
+  // }
     mymemcpy(&currentProcess->p_s, old_status, sizeof(*old_status));
     schedInsertProc(currentProcess);
     scheduler();
-  }
 }

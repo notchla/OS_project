@@ -2,6 +2,7 @@
 #include "pcb.h"
 #include "system.h"
 #include "listx.h"
+#include "p1.5test_bikaya_v0.c"
 
 
 struct list_head readyQueue = LIST_HEAD_INIT(readyQueue);
@@ -35,6 +36,7 @@ void aging(){
 void scheduler(){
   if(emptyProcQ(&readyQueue)) {
     currentProcess = NULL;
+    // termprint("empty");
     //work done
     if (processCount == 0) {
       HALT();
@@ -58,7 +60,7 @@ void scheduler(){
     currentProcess = removeProcQ(&readyQueue);
     //order of these operations is important
     aging();
-    setTIMER(TIME_SLICE);
+    setTIMER(TIME_SLICE*TIME_SCALE);
     //load currentProcess CPU status
     LDST((&(currentProcess-> p_s)));
   }
