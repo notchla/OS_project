@@ -22,8 +22,9 @@ void interruptHandler() {
   #elif TARGET_UARM
   old_status = (state_t*) INT_OLDAREA;
   cause = old_status-> CP15_Cause;
-  currentProcess-> p_s.pc = currentProcess-> p_s.pc - WORD_SIZE;
-  cause = (cause >> 8) & CAUSE_MASK;
+  // currentProcess-> p_s.pc = currentProcess-> p_s.pc - WORD_SIZE;
+  old_status->pc -= WORD_SIZE;
+  // cause = (cause >> 8) & CAUSE_MASK;
   #endif
   // if (cause == INTERVALTIME_INT) {
   //   termprint("test interrupts\n");

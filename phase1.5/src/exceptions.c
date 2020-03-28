@@ -28,7 +28,7 @@ void syscallHandler() {
     // tprint("1");
     PANIC();
   }
-  syscallRequest = callerState-> CP15_Cause;
+  syscallRequest = callerState-> a1;
   callerState-> pc = callerState-> pc + WORD_SIZE;
   #endif
   switch(syscallRequest) {

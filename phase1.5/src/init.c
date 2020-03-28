@@ -45,8 +45,7 @@ void NEWPROCESS(memaddr functionAddr) {
   tempProcess-> p_s.reg_t9 = functionAddr;
   #elif TARGET_UARM
   tempProcess-> p_s.sp = addr;
-  // tempProcess-> p_s.cpsr = STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE);  //both interrupts and local timer
-  tempProcess-> p_s.cpsr = ;
+  tempProcess-> p_s.cpsr = STATUS_ENABLE_TIMER(STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE)); //both interrupts and local timer
   tempProcess-> p_s.pc = functionAddr;
   tempProcess-> p_s.ip = functionAddr;
   tempProcess-> p_s.CP15_Control = CP15_CONTROL_NULL;  //VM disabled
