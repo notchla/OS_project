@@ -26,17 +26,19 @@ void interruptHandler() {
   old_status->pc -= WORD_SIZE;
   // cause = (cause >> 8) & CAUSE_MASK;
   #endif
-  // if (cause == INTERVALTIME_INT) {
-  //   termprint("test interrupts\n");
+  // if (cause == LOCALTIME_INT) {
   //   mymemcpy(&currentProcess->p_s, old_status, sizeof(*old_status));
   //   schedInsertProc(currentProcess);
   //   scheduler();
   // }
-  // else{
-  //   static termreg_t *term0_reg = (termreg_t *)DEV_REG_ADDR(IL_TERMINAL, 0);
+  // else if (cause == TERM_INT){
+  //   unsigned int stat = tx_status(term0_reg);
+  //   while ((stat = tx_status(term0_reg)) == ST_BUSY)
+  //     ;
   //   term0_reg->transm_command = CMD_ACK;
+  //   LDST(old_status);
   // }
-    mymemcpy(&currentProcess->p_s, old_status, sizeof(*old_status));
-    schedInsertProc(currentProcess);
-    scheduler();
+  mymemcpy(&currentProcess->p_s, old_status, sizeof(*old_status));
+  schedInsertProc(currentProcess);
+  scheduler();
 }

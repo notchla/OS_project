@@ -11,13 +11,13 @@
 #define WAIT_IO_DEVICE            8
 
 //interrupt lines
-#define LOCALTIME_INT             1
-#define INTERVALTIME_INT          2
-#define DISK_INT                  3
-#define TAPE_INT                  4
-#define NETWORK_INT               5
-#define PRINTER_INT               6
-#define TERM_INT                  7
+#define LOCALTIME_INT             2
+#define INTERVALTIME_INT          4
+#define DISK_INT                  8
+#define TAPE_INT                  16
+#define NETWORK_INT               32
+#define PRINTER_INT               64
+#define TERM_INT                  128
 
 //filter interrupt cause bits
 #define CAUSE_MASK                0x000000FF
