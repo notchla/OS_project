@@ -15,14 +15,17 @@ void mymemcpy(void *dest, void *src, int n){
 void interruptHandler() {
   state_t* old_status;
   unsigned int cause;
+  unsigned int excCode;
   #if TARGET_UMPS
   old_status = (state_t*) IE_OLDAREA;
   cause = old_status-> cause;
+  excCode = (cause >> 2) & 0x0000001F;
   cause = (cause >> 8) & CAUSE_MASK;
   #elif TARGET_UARM
   old_status = (state_t*) INT_OLDAREA;
   cause = old_status-> CP15_Cause;
   // currentProcess-> p_s.pc = currentProcess-> p_s.pc - WORD_SIZE;
+  excCode = CAUSE_IP_GET(cause, 2);
   old_status->pc -= WORD_SIZE;
   // cause = (cause >> 8) & CAUSE_MASK;
   #endif
@@ -38,7 +41,10 @@ void interruptHandler() {
   //   term0_reg->transm_command = CMD_ACK;
   //   LDST(old_status);
   // }
-  mymemcpy(&currentProcess->p_s, old_status, sizeof(*old_status));
-  schedInsertProc(currentProcess);
-  scheduler();
+  if(excCode == 0){
+    mymemcpy(&currentProcess->p_s, old_status, sizeof(*old_status));
+    schedInsertProc(currentProcess);
+    scheduler();
+  }
+  
 }

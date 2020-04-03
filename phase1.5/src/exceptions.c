@@ -56,7 +56,7 @@ void syscallHandler() {
   }
 }
 
-void kill() {
+void kill() { //todo scrivere ricorsiva
   if(!emptyChild(currentProcess)) {
     pcb_t* child;
     list_for_each_entry(child, &currentProcess->p_child, p_sib){
