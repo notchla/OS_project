@@ -39,7 +39,7 @@ void NEWPROCESS(memaddr functionAddr) {
   tempProcess-> priority = getProcCount();
   #if TARGET_UMPS
   tempProcess-> p_s.reg_sp = addr;
-  tempProcess-> p_s.status = ALLOFF | TIMERON | IEON | IEMASK;
+  tempProcess-> p_s.status = ALLOFF | IEON | IEMASK;
   // tempProcess-> p_s.status = ALLOFF | TIMERON | IEON;//test
   tempProcess-> p_s.pc_epc = functionAddr;
   tempProcess-> p_s.reg_t9 = functionAddr;

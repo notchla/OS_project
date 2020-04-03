@@ -60,7 +60,9 @@ void scheduler(){
     currentProcess = removeProcQ(&readyQueue);
     //order of these operations is important
     aging();
-    setTIMER(TIME_SLICE*TIME_SCALE);
+    // setTIMER(TIME_SLICE*TIME_SCALE);
+    unsigned int *timer = (unsigned int*) BUS_REG_TIMER;
+    *timer = (TIME_SLICE * TIME_SCALE);
     //load currentProcess CPU status
     LDST((&(currentProcess-> p_s)));
   }
