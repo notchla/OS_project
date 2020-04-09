@@ -5,15 +5,15 @@
 
 void trapHandler();
 
-//gestore delle syscall
+//called when there is an incoming syscall to be managed
 void syscallHandler();
 
 void TLBManager();
 
-//termina il processo corrente e tutta la sua progenie togliendola dalla ready_queue
+//terminates the current process and all the children and removes them from the ready_queue
 void kill();
 
-//elimina process e tutta la sua progenie da ready_queue, chiamata in kill()
+//recursively deletes the while tree of process. auxiliary function to kill()
 void recursive_kill(pcb_t* process);
 
 #endif
