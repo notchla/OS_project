@@ -1,7 +1,6 @@
 #include "interrupts.h"
 #include "system.h"
 #include "scheduler.h"
-#include "p1.5test_bikaya_v0.c"
 
 void mymemcpy(void *dest, void *src, int n){
   char *csrc = (char*)src;

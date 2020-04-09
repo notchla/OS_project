@@ -3,7 +3,7 @@
 #include "pcb.h"
 #include "listx.h"
 #include "system.h"
-#include "p1.5test_bikaya_v0.c"
+#include "types_bikaya.h"
 
 void trapHandler() {
   //stub function, to be implemented
@@ -24,8 +24,8 @@ void syscallHandler() {
   callerState-> pc_epc = callerState-> pc_epc + WORD_SIZE;
   #elif TARGET_UARM
   callerState = (state_t*) SYSBK_OLDAREA;
+  //not in kernel mode
   if((callerState-> cpsr & STATUS_SYS_MODE) == STATUS_NULL) {
-    // tprint("1");
     PANIC();
   }
   syscallRequest = callerState-> a1;
@@ -56,25 +56,35 @@ void syscallHandler() {
   }
 }
 
-void kill() { //todo scrivere ricorsiva
-  if(!emptyChild(currentProcess)) {
-    pcb_t* child;
-    list_for_each_entry(child, &currentProcess->p_child, p_sib){
-      if(outProcQ(&readyQueue, child)) { //if actually deleting something
-        processCount = processCount - 1;
-        freePcb(child);
-      }
-    }
-    outChild(currentProcess);
-    freePcb(currentProcess);
-  } else {
+void kill() {
+  if(!emptyChild(currentProcess)){
+    recursive_kill(currentProcess);
+  }
+  else{
     outChild(currentProcess);
     freePcb(currentProcess);
     processCount = processCount - 1;
   }
   currentProcess = NULL;
-  //return control to scheduler
   scheduler();
+}
+
+void recursive_kill(pcb_t* process){
+  if(process == NULL)
+    return;
+  pcb_t* child;
+  list_for_each_entry(child, &process->p_child, p_sib){
+    recursive_kill(child);
+  }
+  if(outProcQ(&readyQueue, process)){
+    processCount = processCount - 1;
+    freePcb(process);
+  }
+  else{ //current process case
+    outChild(process);
+    freePcb(process);
+    currentProcess = currentProcess - 1;
+  }
 }
 
 void TLBManager() {

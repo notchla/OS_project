@@ -37,10 +37,11 @@ void NEWPROCESS(memaddr functionAddr) {
   incProcCount();
   unsigned int addr = (RAMTOP - FRAME_SIZE*getProcCount());
   tempProcess-> priority = getProcCount();
+  tempProcess->original_priority = getProcCount();
+  
   #if TARGET_UMPS
   tempProcess-> p_s.reg_sp = addr;
   tempProcess-> p_s.status = ALLOFF | IEON | IEMASK;
-  // tempProcess-> p_s.status = ALLOFF | TIMERON | IEON;//test
   tempProcess-> p_s.pc_epc = functionAddr;
   tempProcess-> p_s.reg_t9 = functionAddr;
   #elif TARGET_UARM
@@ -78,7 +79,7 @@ void initROM() {
 
 void initData() {
   initPcbs();
-  //initASL();
+  // initASL();
 }
 
 void initialProcess() {
