@@ -8,6 +8,16 @@ struct list_head readyQueue = LIST_HEAD_INIT(readyQueue);
 pcb_t* currentProcess = NULL;
 int processCount = 0;
 
+void mymemcpy(void *dest, void *src, int n){
+  char *csrc = (char*)src;
+  char *cdest = (char*)dest;
+
+  for (int i = 0;i<n;i++){
+    cdest[i] = csrc[i];
+  }
+}
+
+
 void incProcCount(){
     ++processCount;
 }
@@ -29,6 +39,7 @@ void aging(){
 }
 
 void scheduler(){
+
   if(emptyProcQ(&readyQueue)) {
     currentProcess = NULL;
     //work done
@@ -38,14 +49,16 @@ void scheduler(){
   }
   else {
     currentProcess = removeProcQ(&readyQueue);
-
-    if(currentProcess->first_activation = 0){
-      unsigned int *time = (unsigned int*) BUS_REG_TOD_LO;
-      currentProcess->first_activation = *time;
-    }
     //order of these operations is important
     aging();
     // setTIMER(TIME_SLICE*TIME_SCALE);
+
+    unsigned int *time = (unsigned int*) BUS_REG_TOD_LO;
+    currentProcess->last_restart = *time;
+    if(!currentProcess->first_activation){
+      currentProcess->first_activation = *time;
+    }
+
     unsigned int *timer = (unsigned int*) BUS_REG_TIMER;
     *timer = (TIME_SLICE * TIME_SCALE);
     //load currentProcess CPU status

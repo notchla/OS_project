@@ -4,6 +4,8 @@
 #define TIME_SLICE 3000  //time slice in us
 
 //syscall codes
+#define GET_CPU_TIME              1
+#define CREATE_PROCESS            2
 #define TERMINATE_PROCESS         3
 
 //interrupt lines

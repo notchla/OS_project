@@ -8,6 +8,7 @@ extern pcb_t* currentProcess;
 extern int processCount;
 extern int  softBlockCount;
 
+void mymemcpy(void *dest, void *src, int n);
 //gestisce l'esecuzione dei processi tramite priorita e meccanismo di aging
 void scheduler();
 //incrementa il numero di processi

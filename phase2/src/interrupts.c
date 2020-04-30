@@ -2,15 +2,6 @@
 #include "system.h"
 #include "scheduler.h"
 
-void mymemcpy(void *dest, void *src, int n){
-  char *csrc = (char*)src;
-  char *cdest = (char*)dest;
-
-  for (int i = 0;i<n;i++){
-    cdest[i] = csrc[i];
-  }
-}
-
 void interruptHandler() {
   state_t* old_status;
   unsigned int cause;
