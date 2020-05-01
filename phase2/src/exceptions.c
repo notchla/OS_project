@@ -52,7 +52,7 @@ void syscallHandler() {
       create_process(callerState, start_time);
     break;
     case TERMINATE_PROCESS:
-      kill(start_time);
+      kill(callerState, start_time);
     break;
     //syscall not recognized
     default:
@@ -95,12 +95,14 @@ void create_process(state_t* callerState, unsigned int start_time) {
   new_state = (state_t*) callerState->reg_a1;
   priority = callerState->reg_a2;
   //set the cpid to the pcb address
-  callerState->reg_a3 = &newProc;
+  if(!callerState->reg_a3)
+    callerState->reg_a3 = (unsigned int) newProc;
   #elif TARGET_UARM
   new_state = (state_t*) callerState->a2;
   priority = callerState->a3;
   //set the cpid to the pcb address
-  callerState->a4 = &newProc;
+  if(!callerState->a4)
+    callerState->a4 = (unsigned int) newProc;
   #endif
   newProc->priority = priority;
   //insert the new process as a child
@@ -121,21 +123,32 @@ void create_process(state_t* callerState, unsigned int start_time) {
   update_kernel_time(start_time);
 }
 
-void kill(unsigned int start_time) {
-  if(!emptyChild(currentProcess)){
+void kill(state_t* callerState, unsigned int start_time) {
+  pcb_t* kpid = NULL;
+  #if TARGET_UMPS
+  kpid = (pcb_t*) callerState->reg_a1;
+  #elif TARGET_UARM
+  kpid = (pcb_t*)  callerState->a2;
+  #endif
+  //TODO: gestire successo o errore
+  if (kpid == NULL)
+    kpid = currentProcess;
+  if(!emptyChild(kpid)){
     //process has child processes, killing the whole tree
-    recursive_kill(currentProcess);
+    recursive_kill(kpid);
   }
   else{
     //process is single
-    outChild(currentProcess);
-    freePcb(currentProcess);
+    outChild(kpid);
+    freePcb(kpid);
     processCount = processCount - 1;
   }
-  currentProcess = NULL;
+  kpid = NULL;
   //call to scheduler to advance to the next process waiting
   update_kernel_time(start_time);
-  scheduler();
+  //currentProcess is dead, and we killed it. scheduler gains control to advance execution
+  if(currentProcess == NULL)
+    scheduler();
 }
 
 void recursive_kill(pcb_t* process){
@@ -153,7 +166,26 @@ void recursive_kill(pcb_t* process){
   else {
     outChild(process);
     freePcb(process);
-    currentProcess = currentProcess - 1;
+    processCount = processCount - 1;
+  }
+}
+
+void get_pid_ppid(state_t* callerState, unsigned int start_time) {
+  pcb_t* pid = NULL;
+  #if TARGET_UMPS
+  pid = (pcb_t*) callerState->reg_a1;
+  #elif TARGET_UARM
+  pid = (pcb_t*)  callerState->a2;
+  #endif
+  if(pid != NULL) {
+    pcb_t* ppid = pid->p_parent;
+    #if TARGET_UMPS
+    if(!callerState->reg_a2)
+      callerState->reg_a2 = (unsigned int) ppid;
+    #elif TARGET_UARM
+    if(!callerState->a3)
+      callerState->a3 = (unsigned int) ppid;
+    #endif
   }
 }
 

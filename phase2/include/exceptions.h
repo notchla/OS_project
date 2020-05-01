@@ -17,6 +17,8 @@ void create_process(state_t* callerState, unsigned int start_time);
 //terminates the current process and all the children and removes them from the ready_queue
 void kill();
 
+void get_pid_ppid(state_t* callerState, unsigned int start_time);
+
 //recursively deletes the while tree of process. auxiliary function to kill()
 void recursive_kill(pcb_t* process);
 #endif
