@@ -125,6 +125,14 @@ void create_process(state_t* callerState, unsigned int start_time) {
   LDST(callerState);
 
 }
+int pid_in_readyQ(pcb_t* pid){
+  pcb_t* ptr;
+  list_for_each_entry(ptr, &readyQueue, p_next){
+    if (ptr == pid)
+      return 1;
+  }
+  return 0;
+}
 
 void kill(state_t* callerState, unsigned int start_time) {
   pcb_t* kpid = NULL;
@@ -136,6 +144,16 @@ void kill(state_t* callerState, unsigned int start_time) {
   //TODO: gestire successo o errore
   if (kpid == NULL)
     kpid = currentProcess;
+  if(!pid_in_readyQ(kpid)){
+    #if TARGET_UMPS
+    callerState->reg_v0 = -1;
+    LDST(callerState);
+    #elif TARGET_UARM
+    callerState->a1 = -1;
+    LDST(callerState);
+    #endif
+  }
+
   if(!emptyChild(kpid)){
     //process has child processes, killing the whole tree
     recursive_kill(kpid);
@@ -146,12 +164,19 @@ void kill(state_t* callerState, unsigned int start_time) {
     freePcb(kpid);
     processCount = processCount - 1;
   }
-  kpid = NULL;
   //call to scheduler to advance to the next process waiting
   update_kernel_time(start_time);
+
+  #if TARGET_UMPS
+  callerState->reg_v0 = 0;
+  #elif TARGET_UARM
+  callerState->a1 = 0;
+  #endif
   //currentProcess is dead, and we killed it. scheduler gains control to advance execution
-  if(currentProcess == NULL)
+  if(currentProcess == kpid)
     scheduler();
+  else
+    LDST(callerState);
 }
 
 void recursive_kill(pcb_t* process){
