@@ -60,7 +60,7 @@ void syscallHandler() {
     break;
   }
 }
-
+ // bidogna aggiungere il tempo passato a gestire gli interrupt?
 void Get_Cpu_Time(state_t* callerState, unsigned int start_time) {
   //code for umps
   unsigned int *time = (unsigned int*) BUS_REG_TOD_LO;
@@ -96,7 +96,7 @@ void create_process(state_t* callerState, unsigned int start_time) {
   priority = callerState->reg_a2;
   //set the cpid to the pcb address
   if(!callerState->reg_a3)
-    callerState->reg_a3 = (unsigned int) newProc;
+    callerState->reg_a3 = (unsigned int) newProc; //non sono sicuro del cast
   #elif TARGET_UARM
   new_state = (state_t*) callerState->a2;
   priority = callerState->a3;
@@ -105,22 +105,25 @@ void create_process(state_t* callerState, unsigned int start_time) {
     callerState->a4 = (unsigned int) newProc;
   #endif
   newProc->priority = priority;
+  newProc->original_priority = priority;
   //insert the new process as a child
   insertChild(currentProcess, newProc);
   //shedule the new process
   schedInsertProc(newProc);
   //load the passed state into the new process
-  mymemcpy(new_state, &(newProc->p_s), sizeof(*newProc));
+  // mymemcpy(new_state, &(newProc->p_s), sizeof(*newProc)); //cosi è al contrario
+  mymemcpy(&(newProc->p_s), new_state, sizeof(*new_state));
   processCount = processCount + 1;
   #if TARGET_UMPS
   callerState->reg_v0 = 0;
   #elif TARGET_UARM
   callerState->a1 = 0;
   #endif
+  update_kernel_time(start_time); //deve essere chiamata prima di restituire il controllo
+  
   //return to caller
   LDST(callerState);
 
-  update_kernel_time(start_time);
 }
 
 void kill(state_t* callerState, unsigned int start_time) {
