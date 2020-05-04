@@ -97,7 +97,7 @@ int insertBlocked(int* key, pcb_t* p){
         return 1;//semaphore non puo essere allocato
 }
 
-//rimuove il primo pcd bloccato dal semaforo con coda pari a key, se la coda diventa vuota il semaforo viene rimosso da asl e inserito in semdfree
+//rimuove il primo pcb bloccato dal semaforo con coda pari a key, se la coda diventa vuota il semaforo viene rimosso da asl e inserito in semdfree
 pcb_t* removeBlocked(int* key){
     if(key == NULL)
         return NULL;

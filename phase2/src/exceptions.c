@@ -1,9 +1,11 @@
 #include "exceptions.h"
 #include "scheduler.h"
 #include "pcb.h"
+#include "asl.h"
 #include "listx.h"
 #include "system.h"
 #include "types_bikaya.h"
+#include "utils.h"
 
 void trapHandler() {
   //to be implemented
@@ -45,13 +47,13 @@ void syscallHandler() {
   // callerState-> pc = callerState-> pc + WORD_SIZE; //THIS IS NOT REQUESTED IN UARM
   #endif
   switch(syscallRequest) {
-    case GET_CPU_TIME:
+    case GETCPUTIME:
       Get_Cpu_Time(callerState, start_time);
     break;
-    case CREATE_PROCESS:
+    case CREATEPROCESS:
       create_process(callerState, start_time);
     break;
-    case TERMINATE_PROCESS:
+    case TERMINATEPROCESS:
       kill(callerState, start_time);
     break;
     //syscall not recognized
@@ -120,7 +122,7 @@ void create_process(state_t* callerState, unsigned int start_time) {
   callerState->a1 = 0;
   #endif
   update_kernel_time(start_time); //deve essere chiamata prima di restituire il controllo
-  
+
   //return to caller
   LDST(callerState);
 
@@ -198,6 +200,41 @@ void recursive_kill(pcb_t* process){
   }
 }
 
+void verhogen(state_t* callerState) {
+  int* sem = NULL;
+  #if TARGET_UMPS
+  sem = (int*) callerState->reg_a1;
+  #elif TARGET_UARM
+  sem = (int*)  callerState->a2;
+  #endif
+  (*sem)++;
+  if((*sem) <= 0) {
+    pcb_t* unblocked = removeBlocked(sem);
+    if(unblocked) {
+      schedInsertProc(unblocked);
+    }
+  }
+  //return to caller
+  LDST(callerState);
+}
+
+void passeren(state_t* callerState) {
+  int* sem = NULL;
+  #if TARGET_UMPS
+  sem = (int*) callerState->reg_a1;
+  #elif TARGET_UARM
+  sem = (int*)  callerState->a2;
+  #endif
+  (*sem)--;
+  if((*sem) < 0) {
+    //capire cosa fare con mymemcpoy
+    insertBlocked(sem, currentProcess);
+    scheduler();
+  }
+  //return to caller
+  LDST(callerState);
+}
+
 void get_pid_ppid(state_t* callerState, unsigned int start_time) {
   pcb_t* pid = NULL;
   #if TARGET_UMPS
@@ -215,6 +252,7 @@ void get_pid_ppid(state_t* callerState, unsigned int start_time) {
       callerState->a3 = (unsigned int) ppid;
     #endif
   }
+  LDST(callerState);
 }
 
 void TLBManager() {

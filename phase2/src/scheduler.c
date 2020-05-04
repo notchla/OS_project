@@ -3,20 +3,11 @@
 #include "system.h"
 #include "listx.h"
 #include "p2test_bikaya_v0.1.h"
+#include "utils.h"
 
 struct list_head readyQueue = LIST_HEAD_INIT(readyQueue);
 pcb_t* currentProcess = NULL;
 int processCount = 0;
-
-void mymemcpy(void *dest, void *src, int n){
-  char *csrc = (char*)src;
-  char *cdest = (char*)dest;
-
-  for (int i = 0;i<n;i++){
-    cdest[i] = csrc[i];
-  }
-}
-
 
 void incProcCount(){
     ++processCount;
