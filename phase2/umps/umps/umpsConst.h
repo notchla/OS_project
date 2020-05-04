@@ -1,4 +1,3 @@
-
 //new processor state locations
 #define SYS_NEWAREA         0x200003D4
 #define SYS_OLDAREA         0x20000348

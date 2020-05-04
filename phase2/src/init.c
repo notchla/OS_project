@@ -31,7 +31,7 @@ void newArea(unsigned int address, unsigned int handler) {
 void newProcess(memaddr functionAddr, int priority) {
   pcb_t* tempProcess = allocPcb();
   incProcCount();
-  unsigned int addr = (RAMTOP - FRAME_SIZE*getProcCount());
+  unsigned int addr = (RAMTOP - FRAMESIZE*getProcCount());
   tempProcess-> priority = priority;
   tempProcess->original_priority = priority;
   tempProcess->first_activation = 0;

@@ -1,5 +1,4 @@
 #include "asl.h"
-#include "const.h"
 
 static LIST_HEAD(semdFree);//lista dei semafori liberi
 static LIST_HEAD(ASL);//lista dei semafori attivi
@@ -24,7 +23,7 @@ void initASL(){
         INIT_LIST_HEAD(&semdFree_table[i].s_procQ);
         list_add_tail(&semdFree_table[i].s_next, &semdFree);
     }
-    
+
 }
 
 //ritorna il semaforo con chiave key

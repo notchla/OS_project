@@ -21,15 +21,27 @@
 #define EXC_BADPTE         13
 #define EXC_PTEMISS        14
 
-/* Interrupt lines used by the devices */
-#define INT_T_SLICE  1 /* time slice interrupt */
-#define INT_TIMER    2 /* timer interrupt */
-#define INT_LOWEST   3 /* minimum interrupt number used by real devices */
-#define INT_DISK     3
-#define INT_TAPE     4
-#define INT_UNUSED   5 /* network? */
-#define INT_PRINTER  6
-#define INT_TERMINAL 7
+//processor state locations
+#define SYS_NEWAREA         0x200003D4
+#define SYS_OLDAREA         0x20000348
+#define TRAP_NEWAREA        0x200002BC
+#define TRAP_OLDAREA        0x20000230
+#define TLB_NEWAREA         0x200001A4
+#define TLB_OLDAREA         0x20000118
+#define IE_NEWAREA          0x2000008C
+#define IE_OLDAREA          0x20000000
+
+//state register useful values (umps)
+/*  current values are pushed in the previous(active) whenever an
+    interrput/exception is raised                                             */
+#define ALLOFF            0x00000000 //ALL off, kernel mode
+#define IEON              0x00000004 //turn on interrupts
+#define IECON             0x00000001 //current interrupt on
+#define UMODE             0x00000002 //current user mode on
+#define IEMASK            0x00000400 //interrupt mask on
+#define VMON              0x01000000 //virtual memory on
+#define TIMERON           0x08000000 //local timer on
+#define IEONOLD           0x00000010
 
 #define FRAMESIZE 4096
 
@@ -40,8 +52,33 @@
 
 #ifdef TARGET_UARM
 #include "uarm/uARMconst.h"
+#define CAUSE_ALL_GET(cause) ((cause & 0xFF000000) >> 24)
 #endif
 
+/* architecture generic consts */
+
+#define TIME_SLICE 3000  //time slice in us
+
+/* Interrupt lines used by the devices */
+#define INT_T_SLICE  1 /* time slice interrupt */
+#define INT_TIMER    2 /* timer interrupt */
+#define INT_LOWEST   3 /* minimum interrupt number used by real devices */
+#define INT_DISK     3
+#define INT_TAPE     4
+#define INT_UNUSED   5 /* network? */
+#define INT_PRINTER  6
+#define INT_TERMINAL 7
+
+#define LOCALTIME_INT             0x00000002  /* time slice interrupt */
+#define INTERVALTIME_INT          0x00000004  /* timer interrupt */
+#define DISK_INT                  0x00000008  /* minimum interrupt number used by real devices */
+#define TAPE_INT                  0x00000010
+#define NETWORK_INT               0x00000020  /* network? */
+#define PRINTER_INT               0x00000040
+#define TERM_INT                  0x00000080
+
+//filter interrupt cause bits
+#define CAUSE_MASK                0x000000FF
 
 /* nucleus (phase2)-handled SYSCALL values */
 #define GETCPUTIME       1
@@ -56,5 +93,22 @@
 #define DEFAULT_PRIORITY 1
 #define TRUE             1
 #define FALSE            0
+
+/* Maxi number of overall (eg, system, daemons, user) concurrent processes */
+#define MAXPROC 20
+
+#define UPROCMAX 3  /* number of usermode processes (not including master proc
+		       and system daemons */
+
+#define	HIDDEN static
+#define	TRUE 	1
+#define	FALSE	0
+#define ON 	1
+#define OFF 	0
+#define EOS '\0'
+
+#define DEV_PER_INT 8 /* Maximum number of devices per interrupt line */
+
+#define CR 0x0a   /* carriage return as returned by the terminal */
 
 #endif

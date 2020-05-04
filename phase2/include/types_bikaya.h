@@ -1,19 +1,8 @@
 #ifndef TYPES_BIKAYA_H_INCLUDED
 #define TYPES_BIKAYA_H_INCLUDED
 
-#ifdef TARGET_UMPS
-#include "umps/libumps.h"
-#include "umps/arch.h"
-#include "umps/types.h"
-#endif
-#ifdef TARGET_UARM
-#include "uarm/libuarm.h"
-#include "uarm/arch.h"
-#include "uarm/uARMtypes.h"
-#include "uarm/uARMconst.h"
-#endif
+#include "system.h"
 
-#include "const.h"
 #include "listx.h"
 
 typedef unsigned int memaddr;

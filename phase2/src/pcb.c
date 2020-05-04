@@ -1,5 +1,4 @@
 #include "pcb.h"
-#include "const.h"
 
 static LIST_HEAD(pcbFree);
 
