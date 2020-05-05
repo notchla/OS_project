@@ -39,7 +39,7 @@
 #define IECON             0x00000001 //current interrupt on
 #define UMODE             0x00000002 //current user mode on
 #define IEMASK            0x00000400 //interrupt mask on
-#define VMON              0x01000000 //virtual memory on
+// #define VMON              0x01000000 //virtual memory on
 #define TIMERON           0x08000000 //local timer on
 #define IEONOLD           0x00000010
 

@@ -255,6 +255,45 @@ void get_pid_ppid(state_t* callerState, unsigned int start_time) {
   LDST(callerState);
 }
 
+void Do_IO(state_t* callerState, unsigned int start_time){
+  unsigned int command;
+  unsigned int *reg;
+  int subdevice;
+  unsigned int status;
+  #if TARGET_UMPS
+  command = (unsigned int)callerState->reg_a1;
+  reg = (unsigned int*)callerState->reg_a2;
+  subdevice = (int)callerState->reg_a3;
+  #elif TARGET_UARM
+  command = (unsigned int)callerState->a2;
+  reg = (unsigned int*)callerState->a3;
+  subdevice = (int)callerState->a4;
+  #endif
+  if(subdevice == 1) //for terminal
+    reg++;
+
+  *(reg + 0x4) = command;
+  while((status = (*reg & 0xFF)) == 3)
+    ;
+  *(reg + 0x4) = 1; // ack
+
+  if(status != 1){
+  #if TARGET_UMPS
+     callerState->reg_v0 = -1;
+  #elif TARGET_UARM
+    callerState->a1 = -1;
+  #endif
+  }
+  else{
+    #if TARGET_UMPS
+     callerState->reg_v0 = *reg;
+  #elif TARGET_UARM
+    callerState->a1 = *reg;
+  #endif
+  }
+  LDST(callerState);
+}
+
 void TLBManager() {
   //to be implemented
 }
