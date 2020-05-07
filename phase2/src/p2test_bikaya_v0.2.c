@@ -20,7 +20,7 @@
  *      Modified by Mattia Maldini, Renzo Davoli 2020
  */
 
-#include "p2test_bikaya_v0.1.h"
+#include "p2test_bikaya_v0.2.h"
 
 #ifdef TARGET_UMPS
 #include "umps/libumps.h"
@@ -83,7 +83,7 @@ typedef unsigned int pid_t;
 #define TERMCHARMASK 0xFF00
 
 #define MINLOOPTIME 1000
-#define LOOPNUM     1000
+#define LOOPNUM     10000
 
 #define BADADDR 0xFFFFFFFF /* could be 0x00000000 as well */
 
@@ -323,12 +323,9 @@ void p2() {
     now1 = getTODLO();                                                       /* time of day   */
     SYSCALL(GETCPUTIME, (int)&user_t1, (int)&kernel_t1, (int)&wallclock_t1); /* CPU time used */
 
-    int localsem = 0;
     /* delay for some time */
-    for (i = 1; i < LOOPNUM; i++) {
-        SYSCALL(VERHOGEN, (int)&localsem, 0, 0);
-        SYSCALL(PASSEREN, (int)&localsem, 0, 0);
-    }
+    for (i = 1; i < LOOPNUM; i++)
+        ;
 
     SYSCALL(GETCPUTIME, (int)&user_t2, (int)&kernel_t2, (int)&wallclock_t2); /* CPU time used */
     now2 = getTODLO();                                                       /* time of day  */

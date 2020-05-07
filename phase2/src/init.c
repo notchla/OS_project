@@ -5,7 +5,7 @@
 #include "types_bikaya.h"
 #include "system.h"   //include target libs
 #include "scheduler.h"
-#include "p2test_bikaya_v0.1.h"
+#include "p2test_bikaya_v0.2.h"
 
 #if TARGET_UMPS
 void newArea(unsigned int address, unsigned int handler) {
