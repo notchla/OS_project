@@ -31,6 +31,14 @@ typedef struct pcb_t {
     cpu_time first_activation;  //TOD of first process load
     cpu_time last_restart;      //TOD of last load
 
+    state_t* sysNew;
+    state_t* sysOld;
+    state_t* TlbNew;
+    state_t* TlbOld;
+    state_t* pgtNew;
+    state_t* pgtOld;
+
+
 } pcb_t;
 
 

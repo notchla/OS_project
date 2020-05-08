@@ -8,7 +8,19 @@
 #include "utils.h"
 
 void trapHandler() {
-  //to be implemented
+  state_t* callerState = NULL;
+  #if TARGET_UMPS
+  callerState = (state_t*) TRAP_OLDAREA;
+  #elif TARGET_UARM
+  callerState = (state_t*) PGMTRAP_OLDAREA;
+  #endif
+
+  if(currentProcess->pgtNew != NULL){
+    mymemcpy(currentProcess->pgtOld, callerState, sizeof(state_t));
+    LDST(currentProcess->pgtNew);
+  }
+  //TODO: time handling
+  kill(NULL, 0);
 }
 
 // unsigned int start_time = (unsigned int) BUS_REG_TOD_LO;
@@ -138,12 +150,18 @@ int pid_in_readyQ(pcb_t* pid){
 
 void kill(state_t* callerState, unsigned int start_time) {
   pcb_t* kpid = NULL;
-  #if TARGET_UMPS
-  kpid = (pcb_t*) callerState->reg_a1;
-  #elif TARGET_UARM
-  kpid = (pcb_t*)  callerState->a2;
-  #endif
+  if(callerState == NULL){ //used in specpassup kill
+    kpid = currentProcess;
+    callerState = &currentProcess->p_s;
+  }
+  else{
+    #if TARGET_UMPS
+    kpid = (pcb_t*) callerState->reg_a1;
+    #elif TARGET_UARM
+    kpid = (pcb_t*)  callerState->a2;
+    #endif
   //TODO: gestire successo o errore
+  }
   if (kpid == NULL)
     kpid = currentProcess;
   if(!pid_in_readyQ(kpid)){
@@ -294,6 +312,80 @@ void Do_IO(state_t* callerState, unsigned int start_time){
   LDST(callerState);
 }
 
+void passup_kill(state_t* callerState, unsigned int start_time){
+  #if TARGET_UMPS
+  callerState->reg_v0 = -1;
+  #elif TARGET_UARM
+  callerState->a1 = -1;
+  #endif
+  //todo update kernel time
+  kill(NULL, start_time);
+}
+
+void Spec_Passup(state_t* callerState, unsigned int start_time){
+  int type;
+  #if TARGET_UMPS
+  type = callerState->reg_a1;
+  #elif TARGET_UARM
+  type = callerState->a2;
+  #endif
+  switch (type)
+  {
+    case 0: //sys/break
+      if(currentProcess->sysNew != NULL){
+        //todo time
+        passup_kill(callerState, start_time);
+      }
+      #if TARGET_UMPS
+      currentProcess->sysNew = (state_t*)callerState->reg_a3;
+      currentProcess->sysOld = (state_t*)callerState->reg_a2;
+      #elif TARGET_UARM
+      currentProcess->sysNew = (state_t*)callerState->a4;
+      currentProcess->sysOld = (state_t*)callerState->a3;
+      #endif
+
+      break;
+    case 1:
+      if(currentProcess->TlbNew != NULL){
+        passup_kill(callerState, start_time);
+      }
+      #if TARGET_UMPS
+      currentProcess->TlbNew =(state_t*)callerState->reg_a3;
+      currentProcess->TlbOld = (state_t*)callerState->reg_a2;
+      #elif TARGET_UARM
+      currentProcess->TlbNew = (state_t*)callerState->a4;
+      currentProcess->TlbOld = (state_t*)callerState->a3;
+      #endif
+      break;
+    case 2:
+      if(currentProcess->pgtNew != NULL){
+        passup_kill(callerState, start_time);
+      }
+      #if TARGET_UMPS
+      currentProcess->pgtNew = (state_t*)callerState->reg_a3;
+      currentProcess->pgtOld = (state_t*)callerState->reg_a2;
+      #elif TARGET_UARM
+      currentProcess->pgtNew = (state_t*)callerState->a4;
+      currentProcess->pgtOld = (state_t*)callerState->a3;
+      #endif
+    break;
+  }
+  #if TARGET_UMPS
+  callerState->reg_v0 = 0;
+  #elif TARGET_UARM
+  callerState->a1 = 0;
+  #endif
+
+  LDST(callerState);
+}
+
 void TLBManager() {
-  //to be implemented
+  state_t* callerState = NULL;
+  callerState = (state_t*) TLB_OLDAREA;
+  if(currentProcess->TlbNew != NULL){
+    mymemcpy(currentProcess->TlbOld, callerState, sizeof(state_t));
+    LDST(currentProcess->TlbNew);
+  }
+  //no hanlder defined
+  kill(NULL, 0); //todo time
 }
