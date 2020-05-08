@@ -10,15 +10,25 @@ void syscallHandler();
 
 void TLBManager();
 
-void Get_Cpu_Time(state_t* callerState, unsigned int start_time);
+/* syscalls */
 
-void create_process(state_t* callerState, unsigned int start_time);
+int get_cpu_time(state_t* callerState);
 
+int create_process(state_t* callerState);
 //terminates the current process and all the children and removes them from the ready_queue
-void kill();
+int kill();
 
-void get_pid_ppid(state_t* callerState, unsigned int start_time);
+int verhogen(state_t* callerState);
 
+int passeren(state_t* callerState);
+
+int get_pid_ppid(state_t* callerState);
+
+int do_IO(state_t* callerState);
+
+int spec_passup(state_t* callerState);
 //recursively deletes the while tree of process. auxiliary function to kill()
 void recursive_kill(pcb_t* process);
+
+void passup_kill(state_t* callerState);
 #endif

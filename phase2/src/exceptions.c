@@ -20,25 +20,16 @@ void trapHandler() {
     LDST(currentProcess->pgtNew);
   }
   //TODO: time handling
-  kill(NULL, 0);
-}
-
-// unsigned int start_time = (unsigned int) BUS_REG_TOD_LO;
-
-void update_kernel_time(unsigned int start_time) {
-  unsigned int end_time = (unsigned int) BUS_REG_TOD_LO;
-  currentProcess->last_restart = end_time;
-  currentProcess->kernel_timer += end_time - start_time;
+  kill(NULL);
 }
 
 void syscallHandler() {
+  //save time at the beginning of the kernel code
+  unsigned int start_time = update_user_time(currentProcess);
+
   state_t* callerState = NULL;
   int syscallRequest = 0;
 
-  unsigned int start_time = (unsigned int) BUS_REG_TOD_LO;
-  currentProcess->user_timer += (start_time - currentProcess->last_restart);
-
-  // unsigned int start_time = (unsigned int) BUS_REG_TOD_LO; //for sys1
   #if TARGET_UMPS
   callerState = (state_t*) SYS_OLDAREA;
   //not in kernel mode
@@ -58,24 +49,56 @@ void syscallHandler() {
   syscallRequest = callerState-> a1;
   // callerState-> pc = callerState-> pc + WORD_SIZE; //THIS IS NOT REQUESTED IN UARM
   #endif
+  void * requested_call = NULL;
   switch(syscallRequest) {
     case GETCPUTIME:
-      Get_Cpu_Time(callerState, start_time);
+      requested_call = &get_cpu_time;
     break;
     case CREATEPROCESS:
-      create_process(callerState, start_time);
+      requested_call = &create_process;
     break;
     case TERMINATEPROCESS:
-      kill(callerState, start_time);
+      requested_call = &kill;
+    break;
+    case VERHOGEN:
+      requested_call = &verhogen;
+    break;
+    case PASSEREN:
+      requested_call = &passeren;
+    break;
+    case WAITIO:
+      requested_call = &do_IO;
+    break;
+    case SPECPASSUP:
+      requested_call = &spec_passup;
+    break;
+    case GETPID:
+      requested_call = &get_pid_ppid;
     break;
     //syscall not recognized
     default:
       PANIC();
     break;
   }
+  int call_sched = critical_wrapper(requested_call, callerState, start_time, currentProcess);
+  if(call_sched)
+    //nothing to do
+    scheduler();
+  else
+    LDST(callerState);
 }
+
+/*
+SYSTEM CALL STRUCTURE:
+  input:
+   _ caller state vector
+  output:
+   _ int as bool representing the need to call the scueduler (current process
+     is kill, or blocked by semaphore).
+*/
+
  // bidogna aggiungere il tempo passato a gestire gli interrupt?
-void Get_Cpu_Time(state_t* callerState, unsigned int start_time) {
+int get_cpu_time(state_t* callerState) {
   //code for umps
   unsigned int *time = (unsigned int*) BUS_REG_TOD_LO;
   #if TARGET_UMPS
@@ -87,12 +110,11 @@ void Get_Cpu_Time(state_t* callerState, unsigned int start_time) {
   callerState->a3 = currentProcess->kernel_timer;
   callerState->a2 = currentProcess->user_timer;
   #endif
-
-  update_kernel_time(start_time);
+  return FALSE;
 }
 
 
-void create_process(state_t* callerState, unsigned int start_time) {
+int create_process(state_t* callerState) {
   pcb_t* newProc = allocPcb();
   if(newProc == NULL){
     #if TARGET_UMPS
@@ -101,7 +123,7 @@ void create_process(state_t* callerState, unsigned int start_time) {
     callerState->a1 = -1;
     #endif
     //return to caller
-    LDST(callerState);
+    return FALSE;
   }
   int priority;
   state_t* new_state;
@@ -125,7 +147,6 @@ void create_process(state_t* callerState, unsigned int start_time) {
   //shedule the new process
   schedInsertProc(newProc);
   //load the passed state into the new process
-  // mymemcpy(new_state, &(newProc->p_s), sizeof(*newProc)); //cosi è al contrario
   mymemcpy(&(newProc->p_s), new_state, sizeof(*new_state));
   processCount = processCount + 1;
   #if TARGET_UMPS
@@ -133,10 +154,8 @@ void create_process(state_t* callerState, unsigned int start_time) {
   #elif TARGET_UARM
   callerState->a1 = 0;
   #endif
-  update_kernel_time(start_time); //deve essere chiamata prima di restituire il controllo
-
   //return to caller
-  LDST(callerState);
+  return FALSE;
 
 }
 int pid_in_readyQ(pcb_t* pid){
@@ -148,7 +167,7 @@ int pid_in_readyQ(pcb_t* pid){
   return 0;
 }
 
-void kill(state_t* callerState, unsigned int start_time) {
+int kill(state_t* callerState) {
   pcb_t* kpid = NULL;
   if(callerState == NULL){ //used in specpassup kill
     kpid = currentProcess;
@@ -167,11 +186,10 @@ void kill(state_t* callerState, unsigned int start_time) {
   if(!pid_in_readyQ(kpid)){
     #if TARGET_UMPS
     callerState->reg_v0 = -1;
-    LDST(callerState);
     #elif TARGET_UARM
     callerState->a1 = -1;
-    LDST(callerState);
     #endif
+    return FALSE;
   }
 
   if(!emptyChild(kpid)){
@@ -184,8 +202,6 @@ void kill(state_t* callerState, unsigned int start_time) {
     freePcb(kpid);
     processCount = processCount - 1;
   }
-  //call to scheduler to advance to the next process waiting
-  update_kernel_time(start_time);
 
   #if TARGET_UMPS
   callerState->reg_v0 = 0;
@@ -193,10 +209,7 @@ void kill(state_t* callerState, unsigned int start_time) {
   callerState->a1 = 0;
   #endif
   //currentProcess is dead, and we killed it. scheduler gains control to advance execution
-  if(currentProcess == kpid)
-    scheduler();
-  else
-    LDST(callerState);
+  return (kpid == currentProcess);
 }
 
 void recursive_kill(pcb_t* process){
@@ -218,7 +231,7 @@ void recursive_kill(pcb_t* process){
   }
 }
 
-void verhogen(state_t* callerState) {
+int verhogen(state_t* callerState) {
   int* sem = NULL;
   #if TARGET_UMPS
   sem = (int*) callerState->reg_a1;
@@ -233,10 +246,10 @@ void verhogen(state_t* callerState) {
     }
   }
   //return to caller
-  LDST(callerState);
+  return FALSE;
 }
 
-void passeren(state_t* callerState) {
+int passeren(state_t* callerState) {
   int* sem = NULL;
   #if TARGET_UMPS
   sem = (int*) callerState->reg_a1;
@@ -247,13 +260,14 @@ void passeren(state_t* callerState) {
   if((*sem) < 0) {
     //capire cosa fare con mymemcpoy
     insertBlocked(sem, currentProcess);
-    scheduler();
+    //need to call the scheduler
+    return TRUE;
   }
   //return to caller
-  LDST(callerState);
+  return FALSE;
 }
 
-void get_pid_ppid(state_t* callerState, unsigned int start_time) {
+int get_pid_ppid(state_t* callerState) {
   pcb_t* pid = NULL;
   #if TARGET_UMPS
   pid = (pcb_t*) callerState->reg_a1;
@@ -270,10 +284,10 @@ void get_pid_ppid(state_t* callerState, unsigned int start_time) {
       callerState->a3 = (unsigned int) ppid;
     #endif
   }
-  LDST(callerState);
+  return FALSE;
 }
 
-void Do_IO(state_t* callerState, unsigned int start_time){
+int do_IO(state_t* callerState){
   unsigned int command;
   unsigned int *reg;
   int subdevice;
@@ -309,20 +323,20 @@ void Do_IO(state_t* callerState, unsigned int start_time){
     callerState->a1 = *reg;
   #endif
   }
-  LDST(callerState);
+  return FALSE;
 }
 
-void passup_kill(state_t* callerState, unsigned int start_time){
+void passup_kill(state_t* callerState){
   #if TARGET_UMPS
   callerState->reg_v0 = -1;
   #elif TARGET_UARM
   callerState->a1 = -1;
   #endif
   //todo update kernel time
-  kill(NULL, start_time);
+  kill(NULL);
 }
 
-void Spec_Passup(state_t* callerState, unsigned int start_time){
+int spec_passup(state_t* callerState){
   int type;
   #if TARGET_UMPS
   type = callerState->reg_a1;
@@ -334,7 +348,7 @@ void Spec_Passup(state_t* callerState, unsigned int start_time){
     case 0: //sys/break
       if(currentProcess->sysNew != NULL){
         //todo time
-        passup_kill(callerState, start_time);
+        passup_kill(callerState);
       }
       #if TARGET_UMPS
       currentProcess->sysNew = (state_t*)callerState->reg_a3;
@@ -347,7 +361,7 @@ void Spec_Passup(state_t* callerState, unsigned int start_time){
       break;
     case 1:
       if(currentProcess->TlbNew != NULL){
-        passup_kill(callerState, start_time);
+        passup_kill(callerState);
       }
       #if TARGET_UMPS
       currentProcess->TlbNew =(state_t*)callerState->reg_a3;
@@ -359,7 +373,7 @@ void Spec_Passup(state_t* callerState, unsigned int start_time){
       break;
     case 2:
       if(currentProcess->pgtNew != NULL){
-        passup_kill(callerState, start_time);
+        passup_kill(callerState);
       }
       #if TARGET_UMPS
       currentProcess->pgtNew = (state_t*)callerState->reg_a3;
@@ -376,7 +390,7 @@ void Spec_Passup(state_t* callerState, unsigned int start_time){
   callerState->a1 = 0;
   #endif
 
-  LDST(callerState);
+  return FALSE;
 }
 
 void TLBManager() {
@@ -387,5 +401,5 @@ void TLBManager() {
     LDST(currentProcess->TlbNew);
   }
   //no hanlder defined
-  kill(NULL, 0); //todo time
+  kill(NULL); //todo time
 }
