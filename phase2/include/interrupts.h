@@ -1,7 +1,14 @@
 #ifndef _INTERRUPTS_H
 #define _INTERRUPTS_H
 
-//gestore degli interrupt
-void interruptHandler();
+#include "system.h"
 
+//interrupt handler loaded during init in the interrupt rom area
+void interruptHandler();
+//helper for lines > 3 (devices)
+void deviceHandler();
+
+int getDeviceNumber(int line);
+
+devreg_t* getDeviceRegister(int line, int deviceNumber);
 #endif

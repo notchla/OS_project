@@ -198,6 +198,14 @@ int kill(state_t* callerState) {
   }
   else{
     //process is single
+    //releasing the semaphore
+    //NON NE SONO SICURO
+    int* sem = kpid->p_semkey;
+    if (sem) {
+      outBlocked(kpid);
+      (*sem)++;
+    }
+    //freeing the control block
     outChild(kpid);
     freePcb(kpid);
     processCount = processCount - 1;
@@ -219,6 +227,15 @@ void recursive_kill(pcb_t* process){
   list_for_each_entry(child, &process->p_child, p_sib){
     recursive_kill(child);
   }
+  
+  //releasing the semaphore
+  //NON NE SONO SICURO
+  int* sem = process->p_semkey;
+  if (sem) {
+    outBlocked(process);
+    (*sem)++;
+  }
+
   if(outProcQ(&readyQueue, process)){
     processCount = processCount - 1;
     freePcb(process);

@@ -44,9 +44,15 @@
 #define IEONOLD           0x00000010
 
 #define FRAMESIZE 4096
+//bytes in a word
+#define WORDLEN   4
 
-#define DEV_USED_INTS 5 /* Number of ints reserved for devices: 3,4,5,6,7 */
-#define DEV_PER_INT   8 /* Maximum number of devices per interrupt line */
+/* Number of ints reserved for devices: 3,4,5,6,7 */
+#define DEV_USED_INTS 5
+/* number of interrupts without devices */
+#define INTERNAL_INTS (INT_TERMINAL - DEV_USED_INTS + 1)
+/* Maximum number of devices per interrupt line */
+#define DEV_PER_INT   8
 
 #endif
 
@@ -69,16 +75,28 @@
 #define INT_PRINTER  6
 #define INT_TERMINAL 7
 
-#define LOCALTIME_INT             0x00000002  /* time slice interrupt */
-#define INTERVALTIME_INT          0x00000004  /* timer interrupt */
-#define DISK_INT                  0x00000008  /* minimum interrupt number used by real devices */
-#define TAPE_INT                  0x00000010
-#define NETWORK_INT               0x00000020  /* network? */
-#define PRINTER_INT               0x00000040
-#define TERM_INT                  0x00000080
+//bit representing interrupt line
+#define INT_CPU_BIT                   0x00000001
+#define INT_T_SLICE_BIT               0x00000002
+#define INT_TIMER_BIT                 0x00000004
+#define INT_DISK_BIT                  0x00000008
+#define INT_TAPE_BIT                  0x00000010
+#define INT_UNUSED_BIT                0x00000020
+#define INT_PRINTER_BIT               0x00000040
+#define INT_TERMINAL_BIT              0x00000080
 
 //filter interrupt cause bits
 #define CAUSE_MASK                0x000000FF
+
+/* device register size in bytes */
+#define DEVREGSIZE     16
+
+/* interrupt device map and register location (from pops 7.3, complete description figure) */
+
+#if TARGET_UMPS
+#define BITMAPSTART   0x1000003C
+#define DEVREGSTART   0x10000050
+#endif
 
 /* nucleus (phase2)-handled SYSCALL values */
 #define GETCPUTIME       1
@@ -107,7 +125,8 @@
 #define OFF 	0
 #define EOS '\0'
 
-#define DEV_PER_INT 8 /* Maximum number of devices per interrupt line */
+#define CMD_ACK            1
+#define CMD_TRANSMIT       2
 
 #define CR 0x0a   /* carriage return as returned by the terminal */
 
