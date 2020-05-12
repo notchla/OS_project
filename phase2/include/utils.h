@@ -11,4 +11,6 @@ int critical_wrapper(int (*call)(), state_t* callerState, unsigned int start_tim
 
 unsigned int update_user_time();
 
+void set_return(state_t* caller, int status);
+
 #endif

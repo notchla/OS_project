@@ -3,3 +3,4 @@
 *.umps
 kernel*
 .sconsign.dblite
+umps_config

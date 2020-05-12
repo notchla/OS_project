@@ -7,6 +7,9 @@
 #include "scheduler.h"
 #include "p2test_bikaya_v0.2.h"
 
+//total number of devices + 1 for timer
+int semDev[DEV_USED_INTS * DEV_PER_INT + 1];
+
 #if TARGET_UMPS
 void newArea(unsigned int address, unsigned int handler) {
   state_t* area;
@@ -78,6 +81,9 @@ void initROM() {
 void initData() {
   initPcbs();
   initASL();
+
+  for(int i = 0; i <= DEV_USED_INTS * DEV_PER_INT; i++)
+    semDev[i] = 0;
 }
 
 void initialProcess() {

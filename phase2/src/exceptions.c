@@ -117,11 +117,7 @@ int get_cpu_time(state_t* callerState) {
 int create_process(state_t* callerState) {
   pcb_t* newProc = allocPcb();
   if(newProc == NULL){
-    #if TARGET_UMPS
-    callerState->reg_v0 = -1;
-    #elif TARGET_UARM
-    callerState->a1 = -1;
-    #endif
+    set_return(callerState, -1);
     //return to caller
     return FALSE;
   }
@@ -149,11 +145,7 @@ int create_process(state_t* callerState) {
   //load the passed state into the new process
   mymemcpy(&(newProc->p_s), new_state, sizeof(*new_state));
   processCount = processCount + 1;
-  #if TARGET_UMPS
-  callerState->reg_v0 = 0;
-  #elif TARGET_UARM
-  callerState->a1 = 0;
-  #endif
+  set_return(callerState, 0);
   //return to caller
   return FALSE;
 
@@ -184,11 +176,7 @@ int kill(state_t* callerState) {
   if (kpid == NULL)
     kpid = currentProcess;
   if(!pid_in_readyQ(kpid)){
-    #if TARGET_UMPS
-    callerState->reg_v0 = -1;
-    #elif TARGET_UARM
-    callerState->a1 = -1;
-    #endif
+    set_return(callerState, -1);
     return FALSE;
   }
 
@@ -211,11 +199,7 @@ int kill(state_t* callerState) {
     processCount = processCount - 1;
   }
 
-  #if TARGET_UMPS
-  callerState->reg_v0 = 0;
-  #elif TARGET_UARM
-  callerState->a1 = 0;
-  #endif
+  set_return(callerState, 0);
   //currentProcess is dead, and we killed it. scheduler gains control to advance execution
   return (kpid == currentProcess);
 }
@@ -227,7 +211,7 @@ void recursive_kill(pcb_t* process){
   list_for_each_entry(child, &process->p_child, p_sib){
     recursive_kill(child);
   }
-  
+
   //releasing the semaphore
   //NON NE SONO SICURO
   int* sem = process->p_semkey;
@@ -304,7 +288,7 @@ int get_pid_ppid(state_t* callerState) {
   return FALSE;
 }
 
-int do_IO(state_t* callerState){
+int do_IO(state_t* callerState) {
   unsigned int command;
   unsigned int *reg;
   int subdevice;
@@ -327,28 +311,16 @@ int do_IO(state_t* callerState){
   *(reg + 0x4) = 1; // ack
 
   if(status != 1){
-  #if TARGET_UMPS
-     callerState->reg_v0 = -1;
-  #elif TARGET_UARM
-    callerState->a1 = -1;
-  #endif
+  set_return(callerState, -1);
   }
   else{
-    #if TARGET_UMPS
-     callerState->reg_v0 = *reg;
-  #elif TARGET_UARM
-    callerState->a1 = *reg;
-  #endif
+    set_return(callerState, *reg);
   }
   return FALSE;
 }
 
 void passup_kill(state_t* callerState){
-  #if TARGET_UMPS
-  callerState->reg_v0 = -1;
-  #elif TARGET_UARM
-  callerState->a1 = -1;
-  #endif
+  set_return(callerState, -1);
   //todo update kernel time
   kill(NULL);
 }
@@ -401,11 +373,7 @@ int spec_passup(state_t* callerState){
       #endif
     break;
   }
-  #if TARGET_UMPS
-  callerState->reg_v0 = 0;
-  #elif TARGET_UARM
-  callerState->a1 = 0;
-  #endif
+  set_return(callerState, 0);
 
   return FALSE;
 }

@@ -117,6 +117,17 @@
 /* number of usermode processes (not including master proc and system daemons */
 #define UPROCMAX 3
 
+//device status
+#define ST_READY           1
+#define ST_BUSY            3
+#define ST_TRANSMITTED     5
+//device commands
+#define CMD_ACK            1
+#define CMD_TRANSMIT       2
+
+#define CHAR_OFFSET        8
+#define TERM_STATUS_MASK   0xFF
+
 #define	HIDDEN static
 #define	TRUE 	1
 #define	FALSE	0
