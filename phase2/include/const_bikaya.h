@@ -44,24 +44,34 @@
 #define IEONOLD           0x00000010
 
 #define FRAMESIZE 4096
+
+/* interrupt device map and register location (from pops 7.3, complete description figure) */
+#define BITMAPSTART   0x1000003C
+#define DEVREGSTART   0x10000050
+
+#endif
+#ifdef TARGET_UARM
+#include "uarm/uARMconst.h"
+/* get the whole cause register */
+#define CAUSE_ALL_GET(cause) ((cause & 0xFF000000) >> 24)
+
+#define BITMAPSTART   0x10006FE0
+#define DEVREGSTART   0x100002DC
+
+#endif
+
+/* architecture generic consts */
+
+/* device register size in bytes */
+#define DEVREGSIZE     16
 //bytes in a word
 #define WORDLEN   4
-
 /* Number of ints reserved for devices: 3,4,5,6,7 */
 #define DEV_USED_INTS 5
 /* number of interrupts without devices */
 #define INTERNAL_INTS (INT_TERMINAL - DEV_USED_INTS + 1)
 /* Maximum number of devices per interrupt line */
 #define DEV_PER_INT   8
-
-#endif
-
-#ifdef TARGET_UARM
-#include "uarm/uARMconst.h"
-#define CAUSE_ALL_GET(cause) ((cause & 0xFF000000) >> 24)
-#endif
-
-/* architecture generic consts */
 
 #define TIME_SLICE 3000  //time slice in us
 
@@ -88,16 +98,6 @@
 //filter interrupt cause bits
 #define CAUSE_MASK                0x000000FF
 
-/* device register size in bytes */
-#define DEVREGSIZE     16
-
-/* interrupt device map and register location (from pops 7.3, complete description figure) */
-
-#if TARGET_UMPS
-#define BITMAPSTART   0x1000003C
-#define DEVREGSTART   0x10000050
-#endif
-
 /* nucleus (phase2)-handled SYSCALL values */
 #define GETCPUTIME       1
 #define CREATEPROCESS    2
@@ -114,9 +114,8 @@
 
 /* Maxi number of overall (eg, system, daemons, user) concurrent processes */
 #define MAXPROC 20
-
-#define UPROCMAX 3  /* number of usermode processes (not including master proc
-		       and system daemons */
+/* number of usermode processes (not including master proc and system daemons */
+#define UPROCMAX 3
 
 #define	HIDDEN static
 #define	TRUE 	1
