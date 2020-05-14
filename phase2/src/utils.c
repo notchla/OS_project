@@ -46,3 +46,12 @@ void set_return(state_t* caller, int status) {
   caller->a1 = status;
   #endif
 }
+
+unsigned int log2(unsigned int n) {
+  // very inefficient
+  if(n > 1) {
+    return(1 + log2(n/2));
+  } else {
+    return 0;
+  }
+}

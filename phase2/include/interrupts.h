@@ -10,8 +10,6 @@ void deviceHandler();
 
 int getDeviceNumber(int line);
 
-devreg_t* getDeviceRegister(int line, int deviceNumber);
-
 unsigned int tx_status(termreg_t *tp);
 
 #endif

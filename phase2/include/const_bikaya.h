@@ -72,6 +72,13 @@
 #define INTERNAL_INTS (INT_TERMINAL - DEV_USED_INTS + 1)
 /* Maximum number of devices per interrupt line */
 #define DEV_PER_INT   8
+/* starting from the device register beginning address, first reach the wanted line by multiplying
+   it by the size of the total size of a device register line (DEVREGSIZE * DEVININT);
+   then get to the wanted device by adding (deviceNumber * DEVREGSIZE) */
+#define GET_DEV_REG(line, devNum) ((DEVREGSTART + (line - INTERNAL_INTS) * (DEVREGSIZE * DEV_PER_INT) + (devNum * DEVREGSIZE)))
+/* because there are 5 bitmaps (from interrupt 3 to 7), each 1 word wide, the wanted bitmap
+   line is located at (line - INTERNAL_INTS) words after the start address.*/
+#define GET_BITMAP(line) ((BITMAPSTART + (line - INTERNAL_INTS) * WORDLEN))
 
 #define TIME_SLICE 3000  //time slice in us
 

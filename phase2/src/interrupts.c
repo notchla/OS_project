@@ -21,6 +21,7 @@ void interruptHandler() {
   cause = CAUSE_ALL_GET(cause);
   old_status->pc -= WORD_SIZE;
   #endif
+  /* the order of the cases is important, interrupts sorted by priority. */
   if (cause & INT_CPU_BIT) {
     PANIC();
   }
@@ -62,7 +63,7 @@ void deviceHandler(int line) {
     //something went wrong somewhere
     PANIC();
 
-  devreg_t* deviceRegister = getDeviceRegister(line, deviceNumber);
+  devreg_t* deviceRegister = (devreg_t*) GET_DEV_REG(line, deviceNumber);
   unsigned int stat;
   //mantaining the interrupt priority order, terminal is last
   if (line != INT_TERMINAL) {
@@ -88,47 +89,19 @@ void deviceHandler(int line) {
 }
 
 int getDeviceNumber(int line) {
-  /* because there are 5 bitmaps (from interrupt 3 to 7), each 1 word wide, the wanted bitmap
-  line is located at (line - INTERNAL_INTS) words after the start address.*/
-  unsigned int* bitmap = (unsigned int *) (BITMAPSTART + (line - INTERNAL_INTS) * WORDLEN);
+  unsigned int* bitmap = (unsigned int *) GET_BITMAP(line);
   unsigned int cause = *bitmap;
-  if (cause & INT_CPU_BIT) {
-    return 0;
-  }
-  else if (cause & INT_T_SLICE_BIT) {
-    return 1;
-  }
-  else if (cause & INT_TIMER_BIT){
-    return 2;
-  }
-  else if (cause & INT_DISK_BIT) {
-    return 3;
-  }
-  else if (cause & INT_TAPE_BIT) {
-    return 4;
-  }
-  else if (cause & INT_UNUSED_BIT) {
-    return 5;
-  }
-  else if (cause & INT_PRINTER_BIT) {
-    return 6;
-  }
-  else if (cause & INT_TERMINAL_BIT) {
-    return 7;
-  }
-  else {
+  //find interrupt line (exponent) of the lowest set bit. preserves priority order
+  unsigned int devNum = log2(cause * -cause);
+
+  if((devNum == 0) || (devNum > INT_TERMINAL)) {
     return -1;
+  } else {
+    return(devNum);
   }
 }
 
 unsigned int tx_status(termreg_t *tp)
 {
     return ((tp -> transm_status) & TERM_STATUS_MASK);
-}
-
-devreg_t* getDeviceRegister(int line, int deviceNumber) {
-  /* starting from the device register beginning address, first reach the wanted line by multiplying
-     it by the size of the total size of a device register line (DEVREGSIZE * DEVININT);
-     then get to the wanted device by summing (deviceNumber * DEVREGSIZE) */
-  return ((devreg_t*) (DEVREGSTART + (line - INTERNAL_INTS) * (DEVREGSIZE * DEV_PER_INT) + (deviceNumber * DEVREGSIZE)));
 }
