@@ -6,6 +6,7 @@
 #include "system.h"
 #include "types_bikaya.h"
 #include "utils.h"
+#include "termprint.h"
 
 void trapHandler() {
   state_t* callerState = NULL;
@@ -288,33 +289,58 @@ int get_pid_ppid(state_t* callerState) {
   return FALSE;
 }
 
+unsigned int get_status(termreg_t* reg, int subdevice){
+  if (subdevice)
+    return reg->recv_status;
+  else
+    return reg->transm_status;
+}
+
+void set_command(termreg_t* reg, unsigned int command, int subdevice){
+  if(subdevice)
+    reg->recv_command = command;
+  else
+    reg->transm_command = command;
+}
+
 int do_IO(state_t* callerState) {
   unsigned int command;
-  unsigned int *reg;
+  termreg_t *reg;
   int subdevice;
-  unsigned int status;
   #if TARGET_UMPS
   command = (unsigned int)callerState->reg_a1;
-  reg = (unsigned int*)callerState->reg_a2;
+  reg = (termreg_t*)callerState->reg_a2;
   subdevice = (int)callerState->reg_a3;
   #elif TARGET_UARM
   command = (unsigned int)callerState->a2;
-  reg = (unsigned int*)callerState->a3;
+  reg = (termreg_t*)callerState->a3;
   subdevice = (int)callerState->a4;
   #endif
-  if(subdevice == 1) //for terminal
-    reg++;
 
-  *(reg + 0x4) = command;
-  while((status = (*reg & 0xFF)) == 3)
+  unsigned int stat = get_status(reg, subdevice);
+
+  if (stat != 1 && stat != 5)
+    term_puts("device not ready");
+
+  // if(subdevice == 0)
+  //   reg = reg + 0x8;
+  set_command(reg, command, subdevice);
+
+  while(((stat = get_status(reg, subdevice)) & 0xFF) == 3)
     ;
-  *(reg + 0x4) = 1; // ack
 
-  if(status != 1){
-  set_return(callerState, -1);
+  set_command(reg, 1, subdevice);
+
+  if((stat & 0xFF) != 5){
+  #if TARGET_UMPS
+     callerState->reg_v0 = -1;
+  #elif TARGET_UARM
+    callerState->a1 = -1;
+  #endif
   }
   else{
-    set_return(callerState, *reg);
+    // term_puts("status corretto\n");
+    set_return(callerState, stat);
   }
   return FALSE;
 }

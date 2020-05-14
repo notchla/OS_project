@@ -172,12 +172,16 @@ void print(char *msg) {
 
         /*		PANIC(); */
 
-        if ((status & TERMSTATMASK) != TRANSM)
+        if ((status & TERMSTATMASK) != TRANSM){
+            // term_puts("1");
             PANIC();
+        }
 
-        if (((status & TERMCHARMASK) >> BYTELEN) != *s)
+        if (((status & TERMCHARMASK) >> BYTELEN) != *s){
+            // term_puts("2");
             PANIC();
-
+        }
+        // term_puts("print\n");
         s++;
     }
 
