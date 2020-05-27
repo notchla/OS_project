@@ -13,7 +13,7 @@ UMPSDIR = 'umps'
 UMPSLD = '{}/umpscore.ldscript'.format(UMPSDIR)
 UMPSFLAGS = [
     '-mips1', '-mabi=32', '-mno-gpopt', '-G0', '-mno-abicalls', '-fno-pic', '-fno-stack-protector',
-    '-mfp32', '-I{}/umps'.format(UMPSDIR)
+    '-mfp32', '-I{}/umps'.format(UMPSDIR), '-Wno-builtin-declaration-mismatch'
 ]
 
 BUILD_DIR = "build"
@@ -29,7 +29,7 @@ ENV = {
         "ENV": os.environ,
         "CPPPATH": ['uarm', 'uarm/uarm', 'include'],
         "ASFLAGS": ['-mcpu=arm7tdmi', '-I{}/uarm'.format(UARMDIR)],
-        "CCFLAGS": ['-Wall', '-O0', '-mcpu=arm7tdmi', "-DTARGET_UARM=1"],
+        "CCFLAGS": ['-Wall', '-O0', '-mcpu=arm7tdmi', "-DTARGET_UARM=1", '-Wno-builtin-declaration-mismatch'],
         "LINKFLAGS": [
             '-G0',
             '-nostdlib',
