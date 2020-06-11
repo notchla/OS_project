@@ -2,6 +2,7 @@
 #include "scheduler.h"
 #include "utils.h"
 #include "asl.h"
+#include "termprint.h"
 
 extern int semDev[DEV_USED_INTS * DEV_PER_INT + 1];
 
@@ -29,6 +30,7 @@ void interruptHandler() {
     //TODO
   }
   else if (cause & INT_TIMER_BIT){
+    term_puts("timer\n");
     mymemcpy(&currentProcess->p_s, old_status, sizeof(*old_status));
     schedInsertProc(currentProcess);
     scheduler();
@@ -46,6 +48,7 @@ void interruptHandler() {
     deviceHandler(INT_PRINTER);
   }
   else if (cause & INT_TERMINAL_BIT) {
+    term_puts("terminale\n");
     deviceHandler(INT_TERMINAL);
   }
   else {
