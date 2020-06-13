@@ -44,10 +44,10 @@ void scheduler(){
     aging();
     // setTIMER(TIME_SLICE*TIME_SCALE);
 
-    unsigned int *time = (unsigned int*) BUS_REG_TOD_LO;
-    currentProcess->last_restart = *time;
+    unsigned int time = *((unsigned int *) BUS_REG_TOD_LO);
+    currentProcess->last_restart = time;
     if(!currentProcess->first_activation){
-      currentProcess->first_activation = *time;
+      currentProcess->first_activation = time;
     }
 
     unsigned int *timer = (unsigned int*) BUS_REG_TIMER;

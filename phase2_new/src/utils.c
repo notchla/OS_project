@@ -25,7 +25,7 @@ int critical_wrapper(int (*call)(), state_t* callerState, unsigned int start_tim
     //call the requested syscall function
     call_sched = call(callerState);
   }
-  unsigned int end_time = (unsigned int) BUS_REG_TOD_LO;
+  unsigned int end_time = *((unsigned int *) BUS_REG_TOD_LO);
   //save the time of the last context switch to user mode
   currentProcess->last_restart = end_time;
   //update the currentProcess kernel time
@@ -34,7 +34,7 @@ int critical_wrapper(int (*call)(), state_t* callerState, unsigned int start_tim
 }
 
 unsigned int update_user_time(pcb_t* currentProcess) {
-  unsigned int start_time = (unsigned int) BUS_REG_TOD_LO;
+  unsigned int start_time = *((unsigned int *) BUS_REG_TOD_LO);
   currentProcess->user_timer += (start_time - currentProcess->last_restart);
   return(start_time);
 }

@@ -101,18 +101,18 @@ SYSTEM CALL STRUCTURE:
 
  // bidogna aggiungere il tempo passato a gestire gli interrupt?
 int get_cpu_time(state_t* callerState) {
-  // //code for umps
-  // unsigned int *time = (unsigned int*) BUS_REG_TOD_LO;
-  // #if TARGET_UMPS
-  // callerState->reg_a3 = *time - currentProcess->first_activation;
-  // callerState->reg_a2 = currentProcess->kernel_timer;
-  // callerState->reg_a1 = currentProcess->user_timer;
-  // #elif TARGET_UARM
-  // callerState->a4 = *time - currentProcess->first_activation;
-  // callerState->a3 = currentProcess->kernel_timer;
-  // callerState->a2 = currentProcess->user_timer;
-  // #endif
-  // return FALSE;
+  //code for umps
+  unsigned int time = *((unsigned int *) BUS_REG_TOD_LO);
+  #if TARGET_UMPS
+  callerState->reg_a3 = time - currentProcess->first_activation;
+  callerState->reg_a2 = currentProcess->kernel_timer;
+  callerState->reg_a1 = currentProcess->user_timer;
+  #elif TARGET_UARM
+  callerState->a4 = time - currentProcess->first_activation;
+  callerState->a3 = currentProcess->kernel_timer;
+  callerState->a2 = currentProcess->user_timer;
+  #endif
+  return FALSE;
 }
 
 
@@ -309,7 +309,7 @@ int do_IO(state_t* callerState) {
   unsigned int command;
   termreg_t *reg;
   int subdevice;
-  
+
   #if TARGET_UMPS
   command = (unsigned int)callerState->reg_a1;
   reg = (termreg_t*)callerState->reg_a2;
