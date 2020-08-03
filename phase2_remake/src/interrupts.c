@@ -51,7 +51,7 @@ void interruptHandler() {
       ++(*s_key);
       if(*s_key <= 0){
         pcb_t* waiting_proc = removeBlocked(s_key);
-        set_return(&waiting_proc->p_s, trans_status);
+        set_return(&waiting_proc->p_s, recv_status);
         schedInsertProc(waiting_proc);
       }
     }
@@ -61,7 +61,7 @@ void interruptHandler() {
   }
   else if(cause == 0){
     // term_puts("0");
-    // PANIC();
+    PANIC();
   }
 }
 
