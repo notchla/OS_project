@@ -19,7 +19,6 @@
  *      Modified by Miro Mannino on May 8, 2010
  *      Modified by Mattia Maldini, Renzo Davoli 2020
  */
-#include "termprint.h" //FOR DEBUG
 
 #ifdef TARGET_UMPS
 #include "umps/libumps.h"
@@ -173,12 +172,10 @@ void print(char *msg) {
         /*		PANIC(); */
 
         if ((status & TERMSTATMASK) != TRANSM){
-            term_puts("F");
             PANIC();
         }
 
         if (((status & TERMCHARMASK) >> BYTELEN) != *s){
-            term_puts("S");
             PANIC();
         }
 

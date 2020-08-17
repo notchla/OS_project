@@ -1,5 +1,6 @@
 #include "asl.h"
 #include "const.h"
+#include "utils.h"
 
 static LIST_HEAD(semdFree);//lista dei semafori liberi
 static LIST_HEAD(ASL);//lista dei semafori attivi
@@ -91,7 +92,7 @@ int insertBlocked(int* key, pcb_t* p){
         INIT_LIST_HEAD(&semaphore->s_procQ);
         insertSem(semaphore);
         p->p_semkey = key;
-        if(p->p_next.next != NULL){//controllo su pcb per vedere se appartiene gia ad una lista.se pcb appartiene ad una lista chiamiamo list_del su p->next per non invalidare la lista a cui apparteneva
+        if(p->p_next.next->prev == &p->p_next && p->p_next.prev->next == &p->p_next){//controllo su pcb per vedere se appartiene gia ad una lista.se pcb appartiene ad una lista chiamiamo list_del su p->next per non invalidare la lista a cui apparteneva
             list_del(&p->p_next);
             INIT_LIST_HEAD(&p->p_next);
         }

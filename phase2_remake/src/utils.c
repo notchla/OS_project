@@ -53,3 +53,7 @@ unsigned int get_status(termreg_t* reg, int subdevice){
   else
     return reg->transm_status;
 }
+
+void debug(int id, int val){
+  return ;
+}

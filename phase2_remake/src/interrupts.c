@@ -60,7 +60,6 @@ void interruptHandler() {
     scheduler();
   }
   else if(cause == 0){
-    // term_puts("0");
     PANIC();
   }
 }

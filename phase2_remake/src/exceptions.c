@@ -114,7 +114,42 @@ void syscallHandler() {
 // }
 
 int get_cpu_time(state_t* state){};
-int create_process(state_t* state){};
+
+int create_process(state_t* callerState){
+    pcb_t* newProc = allocPcb();
+  if(newProc == NULL){
+    set_return(callerState, -1);
+    //return to caller
+    return FALSE;
+  }
+  int priority;
+  state_t* new_state;
+  #if TARGET_UMPS
+  new_state = (state_t*) callerState->reg_a1;
+  priority = callerState->reg_a2;
+  //set the cpid to the pcb address
+  if(!callerState->reg_a3)
+    callerState->reg_a3 = (unsigned int) newProc; //non sono sicuro del cast
+  #elif TARGET_UARM
+  new_state = (state_t*) callerState->a2;
+  priority = callerState->a3;
+  //set the cpid to the pcb address
+  if(!callerState->a4)
+    callerState->a4 = (unsigned int) newProc;
+  #endif
+  newProc->priority = priority;
+  newProc->original_priority = priority;
+  //insert the new process as a child
+  insertChild(currentProcess, newProc);
+  //shedule the new process
+  schedInsertProc(newProc);
+  //load the passed state into the new process
+  mymemcpy(&(newProc->p_s), new_state, sizeof(*new_state));
+  processCount = processCount + 1;
+  set_return(callerState, 0);
+  //return to caller
+  return FALSE;
+};
 int kill(state_t* state){};
 
 int verhogen(state_t* callerState){
@@ -145,7 +180,6 @@ int passeren(state_t* callerState){
   #endif
   (*sem)--;
   if((*sem) < 0) {
-    //capire cosa fare con mymemcpoy
     mymemcpy(&(currentProcess->p_s), callerState, sizeof(state_t));
     insertBlocked(sem, currentProcess);
     //need to call the scheduler
@@ -174,48 +208,7 @@ void get_line_dev(termreg_t* reg, int* line, int* dev){
   }
 }
 
-//FAKE DOIO
-// int do_IO(state_t* callerState){
-//   unsigned int command;
-//   termreg_t *reg;
-//   int subdevice;
-
-//   #if TARGET_UMPS
-//   command = (unsigned int)callerState->reg_a1;
-//   reg = (termreg_t*)callerState->reg_a2;
-//   subdevice = (int)callerState->reg_a3;
-//   #elif TARGET_UARM
-//   command = (unsigned int)callerState->a2;
-//   reg = (termreg_t*)callerState->a3;
-//   subdevice = (int)callerState->a4;
-//   #endif
-
-//   unsigned int stat = get_status(reg, subdevice);
-
-//   if (stat != 1 && stat != 5)
-//     term_puts("device not ready");
-
-//   set_command(reg, command, subdevice);
-
-//   while(((stat = get_status(reg, subdevice)) & 0xFF) == 3)
-//     ;
-
-//   set_command(reg, 1, subdevice);
-
-//   if((stat & 0xFF) != 5){
-//   #if TARGET_UMPS
-//      callerState->reg_v0 = -1;
-//   #elif TARGET_UARM
-//     callerState->a1 = -1;
-//   #endif
-//   }
-//   else{
-//     // term_puts("status corretto\n");
-//     set_return(callerState, stat);
-//   }
-//   return FALSE;
-// };
-
+//TODO bloccare il processo che chiama la sys se il il device richiesto è in uso da un altro processo(controllare se un processo è bloccato nel semaforo).scrivere la getlinedev usando indirizzi di memoria facendo modulo e divisione
 int do_IO(state_t* callerState){
   unsigned int command;
   termreg_t *reg;
@@ -251,7 +244,6 @@ int do_IO(state_t* callerState){
   if((*s_key) < 0){
     mymemcpy(&(currentProcess->p_s), callerState, sizeof(*callerState));
     insertBlocked(s_key, currentProcess);
-    // term_puts("d");
     return TRUE;
   }
   PANIC(); //S_KEY SHOULD NEVER BE >= 0

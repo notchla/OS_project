@@ -4,6 +4,7 @@
 #include "listx.h"
 #include "p2test_bikaya_v0.3.h"
 #include "termprint.h"
+#include "utils.h"
 
 struct list_head readyQueue = LIST_HEAD_INIT(readyQueue);
 pcb_t* currentProcess = NULL;
@@ -33,11 +34,13 @@ void scheduler(){
   if(emptyProcQ(&readyQueue)) {
     currentProcess = NULL;
     //work done
-    if (processCount == 0) {
-      WAIT();
-    }
-    else
-      PANIC();
+    // if (processCount == 0) {
+    //   WAIT();
+    // }
+    // else
+    //   PANIC();
+    // WAIT(); 
+    PANIC();
   }
   else {
     currentProcess = removeProcQ(&readyQueue);

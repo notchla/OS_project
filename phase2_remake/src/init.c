@@ -80,7 +80,7 @@ void initData() {
 }
 
 void idle_proc(){
-  while(1);
+  WAIT();
 }
 
 void initialProcess() {

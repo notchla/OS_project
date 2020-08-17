@@ -15,4 +15,6 @@ void set_return(state_t* caller, int status);
 
 unsigned int get_status(termreg_t* reg, int subdevice);
 
+void debug(int, int);
+
 #endif
