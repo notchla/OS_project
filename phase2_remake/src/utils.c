@@ -19,23 +19,26 @@ void mymemcpy(void *dest, void *src, int n){
 *   _ call_sched: forwards the bool returned by the calls.
 */
 
-int critical_wrapper(int (*call)(), state_t* callerState, unsigned int start_time, pcb_t* currentProcess) {
+int critical_wrapper(int (*call)(), state_t* callerState, cpu_time start_time, pcb_t* currentProcess) {
   int call_sched = 0;
   if (call) {
     //call the requested syscall function
     call_sched = call(callerState);
   }
-  unsigned int end_time = (unsigned int) BUS_REG_TOD_LO;
+  cpu_time end_time = *((unsigned int *)BUS_REG_TOD_LO);
   //save the time of the last context switch to user mode
   currentProcess->last_restart = end_time;
   //update the currentProcess kernel time
-  currentProcess->kernel_timer += end_time - start_time;
+  currentProcess->kernel_timer = currentProcess->kernel_timer + end_time - start_time;
   return call_sched;
 }
+void aaatime(unsigned int a, unsigned int b) {};
 
-unsigned int update_user_time(pcb_t* currentProcess) {
-  unsigned int start_time = (unsigned int) BUS_REG_TOD_LO;
-  currentProcess->user_timer += (start_time - currentProcess->last_restart);
+cpu_time update_user_time(pcb_t* currentProcess) {
+  cpu_time start_time = *((unsigned int *)BUS_REG_TOD_LO);;
+  currentProcess->user_timer = currentProcess->user_timer + (start_time - currentProcess->last_restart);
+  currentProcess->last_stop = start_time;
+  aaatime(currentProcess->user_timer, currentProcess->kernel_timer);
   return(start_time);
 }
 

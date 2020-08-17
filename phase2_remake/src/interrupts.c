@@ -8,60 +8,88 @@
 // #include "termprint.h"
 
 void interruptHandler() {
-  state_t* old_status;
+  cpu_time start_time = update_user_time(currentProcess);
+  void* requested_handler = NULL;
+  state_t* oldstatus = NULL;
   unsigned int cause;
   #if TARGET_UMPS
-  old_status = (state_t*) IE_OLDAREA;
-  cause = old_status-> cause;
+  oldstatus = (state_t*) IE_OLDAREA;
+  cause = oldstatus-> cause;
   cause = (cause >> 8) & CAUSE_MASK;
   #elif TARGET_UARM
-  old_status = (state_t*) INT_OLDAREA;
-  cause = old_status-> CP15_Cause;
+  oldstatus = (state_t*) INT_OLDAREA;
+  cause = oldstatus-> CP15_Cause;
   cause = CAUSE_ALL_GET(cause);
-  old_status->pc -= WORD_SIZE;
+  oldstatus->pc -= WORD_SIZE;
   #endif
   if (cause & INTERVALTIME_INT){
-    mymemcpy(&currentProcess->p_s, old_status, sizeof(*old_status));
-    schedInsertProc(currentProcess);
-    scheduler();
+    requested_handler = &timeHandler;
   }
   else if(cause & TERM_INT){
-    int deviceNumber = getDeviceNumber(INT_TERMINAL);
-    if(deviceNumber == -1)
-      HALT();
-    devreg_t* deviceReg = (devreg_t*) DEV_REG_ADDR(INT_TERMINAL, deviceNumber);
-    unsigned int trans_status = tx_status(&(deviceReg->term));
-    unsigned int recv_status = rx_status(&(deviceReg->term));
-    //TODO HANDLE TRASM AND RECEIVE CASE AND CHECK IF A PROCESS NEEDS TO BE WAKED IN THE SEM DEVICE QUEUE
-    if((trans_status & TERM_STATUS_MASK) == ST_TRANSMITTED){
-      int index = INT_TERMINAL + 1;
-      (deviceReg->term).transm_command = CMD_ACK;
-      int* s_key = &semdevices[(index - 3)*DEV_PER_INT + deviceNumber];
-      ++(*s_key);
-      if(*s_key <= 0){
-        pcb_t* waiting_proc = removeBlocked(s_key);
-        set_return(&waiting_proc->p_s, trans_status);
-        schedInsertProc(waiting_proc);
-      }
-    }
-    if((recv_status & TERM_STATUS_MASK) == ST_RECEIVED){
-      int index = INT_TERMINAL;
-      (deviceReg->term).recv_command = CMD_ACK;
-      int *s_key = &semdevices[(index - 3)*DEV_PER_INT + deviceNumber];
-      ++(*s_key);
-      if(*s_key <= 0){
-        pcb_t* waiting_proc = removeBlocked(s_key);
-        set_return(&waiting_proc->p_s, recv_status);
-        schedInsertProc(waiting_proc);
-      }
-    }
-    mymemcpy(&currentProcess->p_s, old_status, sizeof(*old_status));
-    schedInsertProc(currentProcess);
-    scheduler();
+    requested_handler = &termHandler;
   }
   else if(cause == 0){
+    // term_puts("0");
     PANIC();
   }
+  critical_wrapper(requested_handler, oldstatus, start_time, currentProcess);
+  scheduler();
+}
+
+void exitInterrupt(state_t* oldstatus) {
+  mymemcpy(&currentProcess->p_s, oldstatus, sizeof(*oldstatus));
+  schedInsertProc(currentProcess);
+}
+
+int termHandler(state_t* oldstatus) {
+  int deviceNumber = getDeviceNumber(INT_TERMINAL);
+  if(deviceNumber == -1)
+    HALT();
+  devreg_t* deviceReg = (devreg_t*) DEV_REG_ADDR(INT_TERMINAL, deviceNumber);
+  unsigned int line = 0;
+  unsigned int * comReg = NULL;
+  unsigned int status = 0;
+  unsigned int recv_status = rx_status(&(deviceReg->term));
+  unsigned int trans_status = tx_status(&(deviceReg->term));
+  //TODO HANDLE TRASM AND RECEIVE CASE AND CHECK IF A PROCESS NEEDS TO BE WAKED IN THE SEM DEVICE QUEUE
+  if((trans_status & TERM_STATUS_MASK) == ST_TRANSMITTED){
+    comReg = &(deviceReg->term).transm_command;
+    line = INT_TERMINAL + 1;
+    status = trans_status;
+  }
+  if((recv_status & TERM_STATUS_MASK) == ST_RECEIVED){
+    comReg = &(deviceReg->term).recv_command;
+    line = INT_TERMINAL;
+    status = recv_status;
+  }
+  //ack and unlock waiting process
+  ACKDevice(comReg);
+  verhogenDevice(line, status, deviceNumber);
+  //load old status and back to scheduler
+  exitInterrupt(oldstatus);
+  return -1;
+}
+
+void ACKDevice(unsigned int* commandRegister) {
+  if(commandRegister)
+    *commandRegister = CMD_ACK;
+}
+
+void verhogenDevice(int line, unsigned int status, int deviceNumber) {
+  if((line != 0) && (status != 0)) {
+    int *s_key = &semdevices[(line - 3)*DEV_PER_INT + deviceNumber];
+    ++(*s_key);
+    if(*s_key <= 0){
+      pcb_t* waiting_proc = removeBlocked(s_key);
+      set_return(&waiting_proc->p_s, status);
+      schedInsertProc(waiting_proc);
+    }
+  }
+}
+
+int timeHandler(state_t* oldstatus) {
+  exitInterrupt(oldstatus);
+  return -1;
 }
 
 int getDeviceNumber(int line){

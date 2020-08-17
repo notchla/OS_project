@@ -4,12 +4,11 @@
 #include "system.h"
 #include "types_bikaya.h"
 
-
 void mymemcpy(void *dest, void *src, int n);
 
-int critical_wrapper(int (*call)(), state_t* callerState, unsigned int start_time, pcb_t* currentProcess);
+int critical_wrapper(int (*call)(), state_t* callerState, cpu_time start_time, pcb_t* currentProcess);
 
-unsigned int update_user_time();
+cpu_time update_user_time();
 
 void set_return(state_t* caller, int status);
 

@@ -39,17 +39,24 @@ void scheduler(){
     // }
     // else
     //   PANIC();
-    // WAIT(); 
+    // WAIT();
     PANIC();
   }
   else {
+    /* order of these operations is IMPORTANT */
     currentProcess = removeProcQ(&readyQueue);
-    //order of these operations is important
     aging();
+
     // setTIMER(TIME_SLICE*TIME_SCALE);
-    unsigned int *timer = (unsigned int*) BUS_REG_TIMER;
+    cpu_time *timer = (unsigned int*) BUS_REG_TIMER;
     *timer = (TIME_SLICE * TIME_SCALE);
     processCount--;
+    //set/update the restart/activation times in the pcb
+    cpu_time time = *((unsigned int *)BUS_REG_TOD_LO);
+    currentProcess->last_restart = time;
+    if(currentProcess->first_activation == 0){
+      currentProcess->first_activation = time;
+    }
     //load currentProcess CPU status
     LDST((&(currentProcess-> p_s)));
   }

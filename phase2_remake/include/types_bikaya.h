@@ -42,6 +42,7 @@ typedef struct pcb_t {
     cpu_time kernel_timer;      //time elapsed in kernel mode
     cpu_time first_activation;  //TOD of first process load
     cpu_time last_restart;      //TOD of last load
+    cpu_time last_stop;         //TOD of last kernel mode start
 
     state_t* sysNew;
     state_t* sysOld;

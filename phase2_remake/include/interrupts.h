@@ -6,7 +6,14 @@
 //gestore degli interrupt
 void interruptHandler();
 //helper for lines > 3 (devices)
-void deviceHandler();
+int deviceHandler(state_t* oldstatus);
+int termHandler(state_t* oldstatus);
+int timeHandler(state_t* oldstatus);
+
+void exitInterrupt(state_t* oldstatus);
+
+void verhogenDevice(int line, unsigned int status, int deviceNumber);
+void ACKDevice(unsigned int* commandRegister);
 
 int getDeviceNumber(int line);
 int log2(unsigned int);

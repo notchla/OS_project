@@ -13,7 +13,7 @@ void trapHandler() {
 }
 
 void syscallHandler() {
-  unsigned int start_time = update_user_time(currentProcess);
+  cpu_time start_time = update_user_time(currentProcess);
 
   int syscallRequest = 0;
 
@@ -38,7 +38,7 @@ void syscallHandler() {
   syscallRequest = callerState-> a1;
   // callerState-> pc = callerState-> pc + WORD_SIZE; NOT NEEDED IN UARM
   #endif
-  
+
   void * requested_call = NULL;
   switch(syscallRequest) {
     case GETCPUTIME:
@@ -113,7 +113,20 @@ void syscallHandler() {
 //   }
 // }
 
-int get_cpu_time(state_t* state){};
+int get_cpu_time(state_t* callerState){
+  cpu_time time = *(unsigned int*) BUS_REG_TOD_LO;
+  #if TARGET_UMPS
+  callerState->reg_a3 = time - currentProcess->first_activation;
+  //current kernel time, countinmg the time elapsed until the call
+  callerState->reg_a2 = currentProcess->kernel_timer + time - currentProcess->last_stop;
+  callerState->reg_a1 = currentProcess->user_timer;
+  #elif TARGET_UARM
+  callerState->a4 = time - currentProcess->first_activation;
+  callerState->a3 = currentProcess->kernel_timer + time - currentProcess->last_stop;
+  callerState->a2 = currentProcess->user_timer;
+  #endif
+  return FALSE;
+};
 
 int create_process(state_t* callerState){
     pcb_t* newProc = allocPcb();
@@ -139,6 +152,7 @@ int create_process(state_t* callerState){
   #endif
   newProc->priority = priority;
   newProc->original_priority = priority;
+  newProc->first_activation = 0;
   //insert the new process as a child
   insertChild(currentProcess, newProc);
   //shedule the new process
@@ -213,7 +227,7 @@ int do_IO(state_t* callerState){
   unsigned int command;
   termreg_t *reg;
   int subdevice;
-  
+
   #if TARGET_UMPS
   command = (unsigned int)callerState->reg_a1;
   reg = (termreg_t*)callerState->reg_a2;
