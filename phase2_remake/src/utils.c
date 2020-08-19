@@ -32,13 +32,11 @@ int critical_wrapper(int (*call)(), state_t* callerState, cpu_time start_time, p
   currentProcess->kernel_timer = currentProcess->kernel_timer + end_time - start_time;
   return call_sched;
 }
-void aaatime(unsigned int a, unsigned int b) {};
 
 cpu_time update_user_time(pcb_t* currentProcess) {
   cpu_time start_time = *((unsigned int *)BUS_REG_TOD_LO);;
   currentProcess->user_timer = currentProcess->user_timer + (start_time - currentProcess->last_restart);
   currentProcess->last_stop = start_time;
-  aaatime(currentProcess->user_timer, currentProcess->kernel_timer);
   return(start_time);
 }
 

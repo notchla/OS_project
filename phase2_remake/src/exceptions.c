@@ -77,56 +77,128 @@ void syscallHandler() {
   else
     LDST(callerState);
 }
+int pid_in_readyQ(pcb_t* pid){
+  pcb_t* ptr;
+  list_for_each_entry(ptr, &readyQueue, p_next){
+    if (ptr == pid)
+      return 1;
+  }
+  return 0;
+}
 
-// void kill() {
-//   if(!emptyChild(currentProcess)){
-//     //process has child processes, killing the whole tree
-//     recursive_kill(currentProcess);
-//   }
-//   else{
-//     //process is single
-//     outChild(currentProcess);
-//     freePcb(currentProcess);
-//     processCount = processCount - 1;
-//   }
-//   currentProcess = NULL;
-//   //call to scheduler to advance to the next process waiting
-//   scheduler();
-// }
+void set_register(unsigned int reg, unsigned int val) {
+  *(unsigned int*) reg = val;
+}
 
-// void recursive_kill(pcb_t* process){
-//   if(process == NULL)
-//     return;
-//   pcb_t* child;
-//   list_for_each_entry(child, &process->p_child, p_sib){
-//     recursive_kill(child);
-//   }
-//   if(outProcQ(&readyQueue, process)){
-//     processCount = processCount - 1;
-//     freePcb(process);
-//   }
-//   //current process case
-//   else {
-//     outChild(process);
-//     freePcb(process);
-//     currentProcess = currentProcess - 1;
-//   }
-// }
+void get_params(state_t* callerState, unsigned int* p1, unsigned int* p2, unsigned int* p3) {
+  #if TARGET_UMPS
+  if(p1 != NULL)
+    p1 = (unsigned int*) callerState->reg_a1;
+  if(p2 != NULL)
+    p2 = (unsigned int*) callerState->reg_a2;
+  if(p3 != NULL)
+    p3 = (unsigned int*) callerState->reg_a3;
+  #elif TARGET_UARM
+  if(p1 != NULL)
+    p1 = (unsigned int*) callerState->a2;
+  if(p2 != NULL)
+    p2 = (unsigned int*) callerState->a3;
+  if(p3 != NULL)
+    p3 = (unsigned int*) callerState->a4;
+  #endif
+}
+
+int kill(state_t* callerState) {
+  pcb_t* kpid = NULL;
+  unsigned int killed_current = FALSE;
+  #if TARGET_UMPS
+  kpid = (pcb_t*) callerState->reg_a1;
+  #elif TARGET_UARM
+  kpid = (pcb_t*) callerState->a2;
+  #endif
+  if (kpid == NULL) {
+    kpid = currentProcess;
+    killed_current = TRUE;
+  }
+  else if(!pid_in_readyQ(kpid)){
+    set_return(callerState, -1);
+    return FALSE;
+  }
+  if(!emptyChild(kpid)){
+    //process has child processes, killing the whole tree
+    recursive_kill(kpid);
+  } else {
+    //single process
+    if (kpid->p_semkey) {
+      //process was blocked on a semaphore
+      outBlocked(kpid);
+      if(kpid->p_semkey <= &(semdevices[0]) && kpid->p_semkey >= &(semdevices[(1 + DEV_USED_INTS) * DEV_PER_INT - 1])) {
+        // not blocked on device
+        *(kpid->p_semkey)++;
+      }
+    }
+    // remove killed process from parent
+    outChild(kpid);
+    if(killed_current) {
+      // currentProcess is dead, and we killed it.
+      //no active process
+      currentProcess = NULL;
+    } else {
+      //remove terminated process from readyQueue
+      outProcQ(&readyQueue, kpid);
+    }
+    // back to free process list
+    freePcb(kpid);
+    processCount = processCount - 1;
+  }
+  set_return(callerState, 0);
+  // if the current process was terminated the scheduler gains control
+  // the previous state is loaded otherwise
+  return (killed_current);
+}
+
+// helper for the terminateprocess syscall
+void recursive_kill(pcb_t* process){
+  if(process == NULL)
+    return;
+  pcb_t* child;
+  list_for_each_entry(child, &process->p_child, p_sib){
+    // call on every branch
+    recursive_kill(child);
+  }
+  if(process->p_semkey != NULL) {
+    outBlocked(process);
+    if(process->p_semkey <= &(semdevices[0]) && process->p_semkey >= &(semdevices[(1 + DEV_USED_INTS) * DEV_PER_INT - 1])) {
+      *(process->p_semkey)++;
+    }
+  }
+  if(process != currentProcess){
+    currentProcess = NULL;
+    outProcQ(&readyQueue, process);
+  }
+  else {
+    //current process cases
+    outChild(currentProcess);
+  }
+  freePcb(process);
+  processCount = processCount - 1;
+}
 
 int get_cpu_time(state_t* callerState){
   cpu_time time = *(unsigned int*) BUS_REG_TOD_LO;
   #if TARGET_UMPS
-  *(cpu_time*)callerState->reg_a3 = time - currentProcess->first_activation;
+  set_register(callerState->reg_a3, time - currentProcess->first_activation);
   //current kernel time, countinmg the time elapsed until the call
-  *(cpu_time*)callerState->reg_a2 = currentProcess->kernel_timer + time - currentProcess->last_stop;
-  *(cpu_time*)callerState->reg_a1 = currentProcess->user_timer;
+  set_register(callerState->reg_a2, currentProcess->kernel_timer + time - currentProcess->last_stop);
+  set_register(callerState->reg_a1, currentProcess->user_timer);
   #elif TARGET_UARM
-  *(cpu_time*)callerState->a4 = time - currentProcess->first_activation;
-  *(cpu_time*)callerState->a3 = currentProcess->kernel_timer + time - currentProcess->last_stop;
-  *(cpu_time*)callerState->a2 = currentProcess->user_timer;
+  set_register(callerState->a4, time - currentProcess->first_activation);
+  set_register(callerState->a3, currentProcess->kernel_timer + time - currentProcess->last_stop);
+  set_register(callerState->a2, currentProcess->user_timer);
   #endif
   return FALSE;
 };
+
 
 int create_process(state_t* callerState){
     pcb_t* newProc = allocPcb();
@@ -141,18 +213,22 @@ int create_process(state_t* callerState){
   new_state = (state_t*) callerState->reg_a1;
   priority = callerState->reg_a2;
   //set the cpid to the pcb address
-  if(!callerState->reg_a3)
-    callerState->reg_a3 = (unsigned int) newProc; //non sono sicuro del cast
+  if(callerState->reg_a3 != 0)
+    set_register(callerState->reg_a3, (unsigned int) newProc);
   #elif TARGET_UARM
   new_state = (state_t*) callerState->a2;
   priority = callerState->a3;
   //set the cpid to the pcb address
-  if(!callerState->a4)
-    callerState->a4 = (unsigned int) newProc;
+  if(callerState->a4 != 0)
+    set_register(callerState->a4, (unsigned int) newProc);
   #endif
   newProc->priority = priority;
   newProc->original_priority = priority;
+  newProc->user_timer = 0;
+  newProc->kernel_timer = 0;
   newProc->first_activation = 0;
+  newProc->last_restart = 0;
+  newProc->last_stop = 0;
   //insert the new process as a child
   insertChild(currentProcess, newProc);
   //shedule the new process
@@ -164,7 +240,6 @@ int create_process(state_t* callerState){
   //return to caller
   return FALSE;
 };
-int kill(state_t* state){};
 
 int verhogen(state_t* callerState){
   int* sem = NULL;
@@ -266,7 +341,35 @@ int do_IO(state_t* callerState){
 };
 
 int spec_passup(state_t* state){};
-int get_pid_ppid(state_t* state){};
+
+int get_pid_ppid(state_t* callerState){
+  unsigned int pid = 0;
+  unsigned int ppid = 0;
+  #if TARGET_UMPS
+  pid = callerState->reg_a1;
+  ppid = callerState->reg_a2;
+  #elif TARGET_UARM
+  pid = callerState->a2;
+  ppid = callerState->a3;
+  #endif
+  if(pid != 0) {
+    pid = (unsigned int) currentProcess;
+    #if TARGET_UMPS
+    set_register(callerState->reg_a1, pid);
+    #elif TARGET_UARM
+    set_register(callerState->a2, pid);
+    #endif
+  }
+  if(ppid != 0) {
+    ppid = (unsigned int) currentProcess->p_parent;
+    #if TARGET_UMPS
+    set_register(callerState->reg_a2, ppid);
+    #elif TARGET_UARM
+    set_register(callerState->a3, ppid);
+    #endif
+  }
+  return FALSE;
+};
 
 void TLBManager() {
   //to be implemented
