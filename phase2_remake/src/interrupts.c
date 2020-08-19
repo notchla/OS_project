@@ -56,16 +56,16 @@ int termHandler(state_t* oldstatus) {
     comReg = &(deviceReg->term).transm_command;
     line = INT_TERMINAL + 1;
     status = trans_status;
+    ACKDevice(comReg);
+    verhogenDevice(line, status, deviceNumber);
   }
   if((recv_status & TERM_STATUS_MASK) == ST_RECEIVED){
     comReg = &(deviceReg->term).recv_command;
     line = INT_TERMINAL;
     status = recv_status;
+    ACKDevice(comReg);
+    verhogenDevice(line, status, deviceNumber);
   }
-  //ack and unlock waiting process
-  ACKDevice(comReg);
-  verhogenDevice(line, status, deviceNumber);
-  //load old status and back to scheduler
   exitInterrupt(oldstatus);
   return -1;
 }

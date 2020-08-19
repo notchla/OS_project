@@ -80,8 +80,10 @@ int insertBlocked(int* key, pcb_t* p){
         if(ptr->s_procQ.next == NULL)
             INIT_LIST_HEAD(&ptr->s_procQ);
         p->p_semkey = key;
-        if(p->p_next.next != NULL)//controllo su pcb per vedere se appartiene gia ad una lista.se pcb appartiene ad una lista chiamiamo list_del su p->next per non invalidare la lista a cui apparteneva
+        if(p->p_next.next->prev == &p->p_next && p->p_next.prev->next == &p->p_next){//controllo su pcb per vedere se appartiene gia ad una lista.se pcb appartiene ad una lista chiamiamo list_del su p->next per non invalidare la lista a cui apparteneva
             list_del(&p->p_next);
+            INIT_LIST_HEAD(&p->p_next);
+        }
         list_add_tail(&p->p_next,&ptr->s_procQ);
         return 0;
     }

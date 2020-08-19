@@ -28,8 +28,14 @@ void newArea(unsigned int address, unsigned int handler) {
 }
 #endif
 
+void idle_proc(){
+  WAIT();
+}
+
 void newProcess(memaddr functionAddr, int priority) {
   pcb_t* tempProcess = allocPcb();
+  if(functionAddr == (memaddr) idle_proc)
+    idle_ptr = tempProcess;
   incProcCount();
   unsigned int addr = (RAMTOP - FRAME_SIZE*getProcCount());
   tempProcess-> priority = priority;
@@ -77,10 +83,6 @@ void initROM() {
 void initData() {
   initPcbs();
   initASL();
-}
-
-void idle_proc(){
-  WAIT();
 }
 
 void initialProcess() {

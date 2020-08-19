@@ -116,14 +116,14 @@ void syscallHandler() {
 int get_cpu_time(state_t* callerState){
   cpu_time time = *(unsigned int*) BUS_REG_TOD_LO;
   #if TARGET_UMPS
-  callerState->reg_a3 = time - currentProcess->first_activation;
+  *(cpu_time*)callerState->reg_a3 = time - currentProcess->first_activation;
   //current kernel time, countinmg the time elapsed until the call
-  callerState->reg_a2 = currentProcess->kernel_timer + time - currentProcess->last_stop;
-  callerState->reg_a1 = currentProcess->user_timer;
+  *(cpu_time*)callerState->reg_a2 = currentProcess->kernel_timer + time - currentProcess->last_stop;
+  *(cpu_time*)callerState->reg_a1 = currentProcess->user_timer;
   #elif TARGET_UARM
-  callerState->a4 = time - currentProcess->first_activation;
-  callerState->a3 = currentProcess->kernel_timer + time - currentProcess->last_stop;
-  callerState->a2 = currentProcess->user_timer;
+  *(cpu_time*)callerState->a4 = time - currentProcess->first_activation;
+  *(cpu_time*)callerState->a3 = currentProcess->kernel_timer + time - currentProcess->last_stop;
+  *(cpu_time*)callerState->a2 = currentProcess->user_timer;
   #endif
   return FALSE;
 };
@@ -176,6 +176,7 @@ int verhogen(state_t* callerState){
   (*sem)++;
   if((*sem) <= 0) {
     pcb_t* unblocked = removeBlocked(sem);
+    debug(3, (int)unblocked);
     if(unblocked) {
       schedInsertProc(unblocked);
       processCount++;
@@ -196,6 +197,7 @@ int passeren(state_t* callerState){
   if((*sem) < 0) {
     mymemcpy(&(currentProcess->p_s), callerState, sizeof(state_t));
     insertBlocked(sem, currentProcess);
+    debug(2, (int)currentProcess);
     //need to call the scheduler
     return TRUE;
   }

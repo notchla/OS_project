@@ -9,6 +9,7 @@
 struct list_head readyQueue = LIST_HEAD_INIT(readyQueue);
 pcb_t* currentProcess = NULL;
 int processCount = 0;
+pcb_t* idle_ptr = NULL;
 
 void incProcCount(){
     ++processCount;
@@ -17,6 +18,7 @@ void incProcCount(){
 void schedInsertProc(pcb_t* process){
     process->priority = process->original_priority;
     insertProcQ(&readyQueue, process);
+    debug(1, (int)process);
 }
 
 int getProcCount(){
@@ -26,7 +28,8 @@ int getProcCount(){
 void aging(){
   pcb_t* ptr;
   list_for_each_entry(ptr, &readyQueue, p_next){
-    ptr->priority += 1;
+    if(ptr != idle_ptr) //idle_proc must be allways the last pcb in the readyqueue
+      ptr->priority += 1;
   }
 }
 
