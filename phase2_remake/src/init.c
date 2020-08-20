@@ -40,12 +40,7 @@ void newProcess(memaddr functionAddr, int priority) {
   unsigned int addr = (RAMTOP - FRAME_SIZE*getProcCount());
   tempProcess-> priority = priority;
   tempProcess->original_priority = priority;
-  tempProcess->user_timer = 0;
-  tempProcess->kernel_timer = 0;
-  tempProcess->first_activation = 0;
-  tempProcess->last_restart = 0;
-  tempProcess->last_stop = 0;
-  
+
   #if TARGET_UMPS
   tempProcess-> p_s.reg_sp = addr;
   tempProcess-> p_s.status = ALLOFF | IEON | IEMASK;

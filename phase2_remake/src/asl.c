@@ -27,7 +27,7 @@ void initASL(){
         INIT_LIST_HEAD(&semdFree_table[i].s_procQ);
         list_add_tail(&semdFree_table[i].s_next, &semdFree);
     }
-    
+
 }
 
 //ritorna il semaforo con chiave key
@@ -157,6 +157,24 @@ pcb_t* outBlocked(pcb_t* p){
     }
     return NULL;
 }
+
+//returns true if a process is found blocked on a semaphore
+unsigned int isBlocked(pcb_t* p){
+    if(p == NULL || p->p_semkey == NULL)
+        return FALSE;
+    semd_t* ptr = getSemd(p->p_semkey);
+    if(ptr!=NULL){
+        pcb_t* temp;
+        list_for_each_entry(temp,&ptr->s_procQ,p_next){//cicla sui processi bloccati dal semaforo con s_key == p->semkey
+            if(temp == p){
+                return TRUE;
+            }
+        }
+        return FALSE;
+    }
+    return FALSE;
+}
+
 //ritorna il puntatore al primo processo puntato dal semaforo con chiave pari a key
 pcb_t* headBlocked(int* key){
     if(key == NULL)

@@ -116,11 +116,13 @@ int kill(state_t* callerState) {
   #elif TARGET_UARM
   kpid = (pcb_t*) callerState->a2;
   #endif
-  if (kpid == NULL) {
+  if (kpid == NULL || (unsigned int) kpid == (unsigned int) currentProcess) {
+    // currentProcess is dead, and we killed it.
     kpid = currentProcess;
     killed_current = TRUE;
   }
-  else if(!pid_in_readyQ(kpid)){
+  // kpid is neither in readyqeue nor blocked on a semaphore; kpid is not a valid pcb
+  else if(!pid_in_readyQ(kpid) && isBlocked(kpid)){
     set_return(callerState, -1);
     return FALSE;
   }
@@ -139,11 +141,7 @@ int kill(state_t* callerState) {
     }
     // remove killed process from parent
     outChild(kpid);
-    if(killed_current) {
-      // currentProcess is dead, and we killed it.
-      //no active process
-      currentProcess = NULL;
-    } else {
+    if(!killed_current) {
       //remove terminated process from readyQueue
       outProcQ(&readyQueue, kpid);
     }
@@ -173,7 +171,6 @@ void recursive_kill(pcb_t* process){
     }
   }
   if(process != currentProcess){
-    currentProcess = NULL;
     outProcQ(&readyQueue, process);
   }
   else {
@@ -224,11 +221,6 @@ int create_process(state_t* callerState){
   #endif
   newProc->priority = priority;
   newProc->original_priority = priority;
-  newProc->user_timer = 0;
-  newProc->kernel_timer = 0;
-  newProc->first_activation = 0;
-  newProc->last_restart = 0;
-  newProc->last_stop = 0;
   //insert the new process as a child
   insertChild(currentProcess, newProc);
   //shedule the new process
@@ -251,7 +243,6 @@ int verhogen(state_t* callerState){
   (*sem)++;
   if((*sem) <= 0) {
     pcb_t* unblocked = removeBlocked(sem);
-    debug(3, (int)unblocked);
     if(unblocked) {
       schedInsertProc(unblocked);
       processCount++;
@@ -272,7 +263,6 @@ int passeren(state_t* callerState){
   if((*sem) < 0) {
     mymemcpy(&(currentProcess->p_s), callerState, sizeof(state_t));
     insertBlocked(sem, currentProcess);
-    debug(2, (int)currentProcess);
     //need to call the scheduler
     return TRUE;
   }

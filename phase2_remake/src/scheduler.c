@@ -18,7 +18,6 @@ void incProcCount(){
 void schedInsertProc(pcb_t* process){
     process->priority = process->original_priority;
     insertProcQ(&readyQueue, process);
-    debug(1, (int)process);
 }
 
 int getProcCount(){
