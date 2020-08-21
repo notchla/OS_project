@@ -26,9 +26,12 @@ int get_pid_ppid(state_t* callerState);
 int do_IO(state_t* callerState);
 
 int spec_passup(state_t* callerState);
+
 //recursively deletes the while tree of process. auxiliary function to kill()
 void recursive_kill(pcb_t* process);
 
-void passup_kill(state_t* callerState);
+int passup_kill(state_t* callerState);//called in specpassup if specpassup is invoke more than once for the same type
+
+void kill_current(); //used in traphandler and tlbhanlder
 
 #endif

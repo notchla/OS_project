@@ -67,7 +67,7 @@ int termHandler(state_t* oldstatus) {
     verhogenDevice(line, status, deviceNumber);
   }
   exitInterrupt(oldstatus);
-  return NULL;
+  return 0;
 }
 
 void ACKDevice(unsigned int* commandRegister) {
@@ -89,7 +89,7 @@ void verhogenDevice(int line, unsigned int status, int deviceNumber) {
 
 int timeHandler(state_t* oldstatus) {
   exitInterrupt(oldstatus);
-  return NULL;
+  return 0;
 }
 
 int getDeviceNumber(int line){

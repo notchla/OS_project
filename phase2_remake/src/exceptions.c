@@ -9,7 +9,18 @@
 #include "asl.h"
 
 void trapHandler() {
-  //to be implemented
+  state_t* callerState = NULL;
+  #if TARGET_UMPS
+  callerState = (state_t*) TRAP_OLDAREA;
+  #elif TARGET_UARM
+  callerState = (state_t*) PGMTRAP_OLDAREA;
+  #endif
+
+  if(currentProcess->pgtNew != NULL){
+    mymemcpy(currentProcess->pgtOld, callerState, sizeof(state_t));
+    LDST(currentProcess->pgtNew);
+  }
+  kill_current();
 }
 
 void syscallHandler() {
@@ -66,8 +77,19 @@ void syscallHandler() {
       requested_call = &get_pid_ppid;
     break;
     //syscall not recognized
-    default:
-      PANIC();
+    default: ;
+      state_t* callerState = NULL;
+      #if TARGET_UMPS
+      callerState = (state_t*) SYS_OLDAREA;
+      #elif TARGET_UARM
+      callerState = (state_t*) SYSBK_OLDAREA;
+      #endif
+
+      if(currentProcess->pgtNew != NULL){
+        mymemcpy(currentProcess->sysOld, callerState, sizeof(state_t));
+        LDST(currentProcess->sysNew);
+      }
+      kill_current();
     break;
   }
   int call_sched = critical_wrapper(requested_call, callerState, start_time, currentProcess);
@@ -122,7 +144,7 @@ int kill(state_t* callerState) {
     killed_current = TRUE;
   }
   // kpid is neither in readyqeue nor blocked on a semaphore; kpid is not a valid pcb
-  else if(!pid_in_readyQ(kpid) && isBlocked(kpid)){
+  else if(!pid_in_readyQ(kpid) && !isBlocked(kpid)){//si potrebbe fare che isblocked ritorni il semaforo in cui kpid è bloccato
     set_return(callerState, -1);
     return FALSE;
   }
@@ -330,7 +352,58 @@ int do_IO(state_t* callerState){
   PANIC(); //S_KEY SHOULD NEVER BE >= 0
 };
 
-int spec_passup(state_t* state){};
+int spec_passup(state_t* callerState){
+  int type;
+  #if TARGET_UMPS
+  type = callerState->reg_a1;
+  #elif TARGET_UARM
+  type = callerState->a2;
+  #endif
+  switch (type)
+  {
+    case 0: //sys/break
+      if(currentProcess->sysNew != NULL){
+        //todo time
+        return passup_kill(callerState);
+      }
+      #if TARGET_UMPS
+      currentProcess->sysNew = (state_t*)callerState->reg_a3;
+      currentProcess->sysOld = (state_t*)callerState->reg_a2;
+      #elif TARGET_UARM
+      currentProcess->sysNew = (state_t*)callerState->a4;
+      currentProcess->sysOld = (state_t*)callerState->a3;
+      #endif
+
+      break;
+    case 1:
+      if(currentProcess->TlbNew != NULL){
+        return passup_kill(callerState);
+      }
+      #if TARGET_UMPS
+      currentProcess->TlbNew =(state_t*)callerState->reg_a3;
+      currentProcess->TlbOld = (state_t*)callerState->reg_a2;
+      #elif TARGET_UARM
+      currentProcess->TlbNew = (state_t*)callerState->a4;
+      currentProcess->TlbOld = (state_t*)callerState->a3;
+      #endif
+      break;
+    case 2:
+      if(currentProcess->pgtNew != NULL){
+        return passup_kill(callerState);
+      }
+      #if TARGET_UMPS
+      currentProcess->pgtNew = (state_t*)callerState->reg_a3;
+      currentProcess->pgtOld = (state_t*)callerState->reg_a2;
+      #elif TARGET_UARM
+      currentProcess->pgtNew = (state_t*)callerState->a4;
+      currentProcess->pgtOld = (state_t*)callerState->a3;
+      #endif
+    break;
+  }
+  set_return(callerState, 0);
+
+  return FALSE;
+};
 
 int get_pid_ppid(state_t* callerState){
   unsigned int pid = 0;
@@ -361,6 +434,63 @@ int get_pid_ppid(state_t* callerState){
   return FALSE;
 };
 
+int passup_kill(state_t* callerState){
+  set_return(callerState, -1);
+  pcb_t* kpid = currentProcess;
+  if(!emptyChild(kpid)){
+    //process has child processes, killing the whole tree
+    recursive_kill(kpid);
+  } else {
+    //single process
+    if (kpid->p_semkey) {
+      //process was blocked on a semaphore
+      outBlocked(kpid);
+      if(kpid->p_semkey <= &(semdevices[0]) && kpid->p_semkey >= &(semdevices[(1 + DEV_USED_INTS) * DEV_PER_INT - 1])) {
+        // not blocked on device
+        *(kpid->p_semkey)++;
+      }
+    }
+    // remove killed process from parent
+    outChild(kpid);
+    // back to free process list
+    freePcb(kpid);
+    processCount = processCount - 1;
+  }
+  //the current process was terminated the scheduler gains control
+  return TRUE;
+}
+
+void kill_current(){
+  pcb_t* kpid = currentProcess;
+  if(!emptyChild(kpid)){
+    //process has child processes, killing the whole tree
+    recursive_kill(kpid);
+  } else {
+    //single process
+    if (kpid->p_semkey) {
+      //process was blocked on a semaphore
+      outBlocked(kpid);
+      if(kpid->p_semkey <= &(semdevices[0]) && kpid->p_semkey >= &(semdevices[(1 + DEV_USED_INTS) * DEV_PER_INT - 1])) {
+        // not blocked on device
+        *(kpid->p_semkey)++;
+      }
+    }
+    // remove killed process from parent
+    outChild(kpid);
+    // back to free process list
+    freePcb(kpid);
+    processCount = processCount - 1;
+  }
+  //the current process was terminated the scheduler gains control
+  scheduler();
+}
+
 void TLBManager() {
-  //to be implemented
+  state_t* callerState = NULL;
+  callerState = (state_t*) TLB_OLDAREA;
+  if(currentProcess->TlbNew != NULL){
+    mymemcpy(currentProcess->TlbOld, callerState, sizeof(state_t));
+    LDST(currentProcess->TlbNew);
+  }
+  kill_current();
 }
