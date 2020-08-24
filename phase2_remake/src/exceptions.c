@@ -85,7 +85,7 @@ void syscallHandler() {
       callerState = (state_t*) SYSBK_OLDAREA;
       #endif
 
-      if(currentProcess->pgtNew != NULL){
+      if(currentProcess->sysNew != NULL){
         mymemcpy(currentProcess->sysOld, callerState, sizeof(state_t));
         LDST(currentProcess->sysNew);
       }
@@ -182,8 +182,12 @@ void recursive_kill(pcb_t* process){
   if(process == NULL)
     return;
   pcb_t* child;
-  list_for_each_entry(child, &process->p_child, p_sib){
-    // call on every branch
+  // list_for_each_entry(child, &process->p_child, p_sib){
+  //   // call on every branch
+  //   recursive_kill(child);
+  // }
+  while(!list_empty(&process->p_child)){
+    pcb_t* child = container_of(process->p_child.next, pcb_t, p_sib);
     recursive_kill(child);
   }
   if(process->p_semkey != NULL) {
@@ -192,13 +196,15 @@ void recursive_kill(pcb_t* process){
       *(process->p_semkey)++;
     }
   }
+  outChild(process);
   if(process != currentProcess){
     outProcQ(&readyQueue, process);
+    // outChild(process);
   }
-  else {
-    //current process cases
-    outChild(currentProcess);
-  }
+  // else {
+  //   //current process cases
+  //   outChild(currentProcess);
+  // }
   freePcb(process);
   processCount = processCount - 1;
 }
@@ -255,24 +261,65 @@ int create_process(state_t* callerState){
   return FALSE;
 };
 
+// int verhogen(state_t* callerState){
+//   int* sem = NULL;
+//   #if TARGET_UMPS
+//   sem = (int*) callerState->reg_a1;
+//   #elif TARGET_UARM
+//   sem = (int*)  callerState->a2;
+//   #endif
+//   (*sem)++;
+//   if((*sem) <= 0) {
+//     pcb_t* unblocked = removeBlocked(sem);
+//     if(unblocked) {
+//       schedInsertProc(unblocked);
+//       processCount++;
+//     }
+//   }
+//   //return to caller
+//   return FALSE;
+// };
+
 int verhogen(state_t* callerState){
-  int* sem = NULL;
+  int* semkey = NULL;
   #if TARGET_UMPS
-  sem = (int*) callerState->reg_a1;
+  semkey = (int*) callerState->reg_a1;
   #elif TARGET_UARM
-  sem = (int*)  callerState->a2;
+  semkey = (int*)  callerState->a2;
   #endif
-  (*sem)++;
-  if((*sem) <= 0) {
-    pcb_t* unblocked = removeBlocked(sem);
+
+  semd_t* sem = getSemd(semkey);
+  if(sem){
+    pcb_t* unblocked = removeBlocked(semkey);
     if(unblocked) {
       schedInsertProc(unblocked);
       processCount++;
     }
   }
-  //return to caller
+  else{
+   (*semkey)++;
+  }
+
   return FALSE;
-};
+}
+
+// int passeren(state_t* callerState){
+//   int* sem = NULL;
+//   #if TARGET_UMPS
+//   sem = (int*) callerState->reg_a1;
+//   #elif TARGET_UARM
+//   sem = (int*)  callerState->a2;
+//   #endif
+//   (*sem)--;
+//   if((*sem) < 0) {
+//     mymemcpy(&(currentProcess->p_s), callerState, sizeof(state_t));
+//     insertBlocked(sem, currentProcess);
+//     //need to call the scheduler
+//     return TRUE;
+//   }
+//   //return to caller
+//   return FALSE;
+// };
 
 int passeren(state_t* callerState){
   int* sem = NULL;
@@ -281,16 +328,18 @@ int passeren(state_t* callerState){
   #elif TARGET_UARM
   sem = (int*)  callerState->a2;
   #endif
-  (*sem)--;
-  if((*sem) < 0) {
+
+  if(*sem){
+    (*sem)--;
+    return FALSE;
+  }
+  else{
     mymemcpy(&(currentProcess->p_s), callerState, sizeof(state_t));
     insertBlocked(sem, currentProcess);
     //need to call the scheduler
     return TRUE;
   }
-  //return to caller
-  return FALSE;
-};
+}
 
 void set_command(termreg_t* reg, unsigned int command, int subdevice){
   if(subdevice)
