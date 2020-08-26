@@ -262,14 +262,12 @@ void test() {
 
     SYSCALL(VERHOGEN, (int)&blkp7, 0, 0);
     /* now for a more rigorous check of process termination */
-    debug(0,0);
     for (p7inc = 0; p7inc < 4; p7inc++) {
         SYSCALL(PASSEREN, (int)&blkp7, 0, 0);
         blkp7child = 0;
         blkleaves  = 0;
 
         creation = SYSCALL(CREATEPROCESS, (int)&p7rootstate, DEFAULT_PRIORITY, (int)&p7pid);
-        debug(1, (int)p7pid);
         if (creation == ERROR) {
             print("error in process creation\n");
             PANIC();
@@ -573,11 +571,8 @@ void p7root() {
     int i;
 
     print("p7root starts\n");
-    int pid1, pid2; //FOR DEBUG;
-    SYSCALL(CREATEPROCESS, (int)&child1state, DEFAULT_PRIORITY, (int)&pid1);
-    debug(2, pid1);
-    SYSCALL(CREATEPROCESS, (int)&child2state, DEFAULT_PRIORITY, (int)&pid2);
-    debug(3, pid2);
+    SYSCALL(CREATEPROCESS, (int)&child1state, DEFAULT_PRIORITY, 0);
+    SYSCALL(CREATEPROCESS, (int)&child2state, DEFAULT_PRIORITY, 0);
 
     for (i = 0; i < NOLEAVES; i++)
         SYSCALL(PASSEREN, (int)&endcreate, 0, 0);
@@ -602,10 +597,8 @@ void child1() {
     print("child1 starts\n");
 
     SYSCALL(CREATEPROCESS, (int)&gchild1state, DEFAULT_PRIORITY, (int)&leaf1pid);
-    debug(4, (int)leaf1pid);
 
     SYSCALL(CREATEPROCESS, (int)&gchild2state, DEFAULT_PRIORITY, (int)&leaf2pid);
-    debug(5, leaf2pid);
 
     SYSCALL(PASSEREN, (int)&blkp7child, 0, 0);
 
@@ -617,10 +610,8 @@ void child2() {
     print("child2 starts\n");
 
     SYSCALL(CREATEPROCESS, (int)&gchild3state, DEFAULT_PRIORITY, (int)&leaf3pid);
-    debug(6, leaf3pid);
 
     SYSCALL(CREATEPROCESS, (int)&gchild4state, DEFAULT_PRIORITY, (int)&leaf4pid);
-    debug(7, leaf4pid);
 
     SYSCALL(PASSEREN, (int)&blkp7child, 0, 0);
 

@@ -156,10 +156,6 @@ int kill(state_t* callerState) {
     if (kpid->p_semkey) {
       //process was blocked on a semaphore
       outBlocked(kpid);
-      if(kpid->p_semkey <= &(semdevices[0]) && kpid->p_semkey >= &(semdevices[(1 + DEV_USED_INTS) * DEV_PER_INT - 1])) {
-        // not blocked on device
-        *(kpid->p_semkey)++;
-      }
     }
     // remove killed process from parent
     outChild(kpid);
@@ -192,9 +188,6 @@ void recursive_kill(pcb_t* process){
   }
   if(process->p_semkey != NULL) {
     outBlocked(process);
-    if(process->p_semkey <= &(semdevices[0]) && process->p_semkey >= &(semdevices[(1 + DEV_USED_INTS) * DEV_PER_INT - 1])) {
-      *(process->p_semkey)++;
-    }
   }
   outChild(process);
   if(process != currentProcess){
@@ -519,10 +512,6 @@ void kill_current(){
     if (kpid->p_semkey) {
       //process was blocked on a semaphore
       outBlocked(kpid);
-      if(kpid->p_semkey <= &(semdevices[0]) && kpid->p_semkey >= &(semdevices[(1 + DEV_USED_INTS) * DEV_PER_INT - 1])) {
-        // not blocked on device
-        *(kpid->p_semkey)++;
-      }
     }
     // remove killed process from parent
     outChild(kpid);

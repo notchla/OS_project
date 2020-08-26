@@ -115,6 +115,7 @@ pcb_t* removeBlocked(int* key){
     if(ptr!=NULL){
         if(!list_empty(&ptr->s_procQ)){
             pcb_t* removed = container_of(ptr->s_procQ.next, pcb_t, p_next);
+            removed->p_semkey = NULL;
             list_del(ptr->s_procQ.next);
             INIT_LIST_HEAD(&removed->p_next);
             if(list_empty(&ptr->s_procQ)){
@@ -143,6 +144,7 @@ pcb_t* outBlocked(pcb_t* p){
         list_for_each_entry(temp,&ptr->s_procQ,p_next){//cicla sui processi bloccati dal semaforo con s_key == p->semkey
             if(temp == p){
                 list_del(&temp->p_next);//rimuove il pcb dalla coda dei processi bloccati
+                p->p_semkey = NULL;
                 if(list_empty(&ptr->s_procQ)){//se la coda e' vuota elimino il semaforo e lo restituisco a semfree
                     list_del(&ptr->s_next);
                     ptr->s_key = NULL;
