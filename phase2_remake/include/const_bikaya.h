@@ -33,8 +33,6 @@
 
 #define FRAMESIZE 4096
 
-#define DEV_USED_INTS 5 /* Number of ints reserved for devices: 3,4,5,6,7 */
-#define DEV_PER_INT   8 /* Maximum number of devices per interrupt line */
 
 #endif
 
@@ -70,6 +68,10 @@
 #define NETWORK_INT               0x00000020
 #define PRINTER_INT               0x00000040
 #define TERM_INT                  0x00000080
+
+#define DEV_USED_INTS   5 /* Number of ints reserved for devices: 3,4,5,6,7 */
+#define DEV_UNUSED_INTS 3 /* Number of devices without reserved interrupt registers */
+#define DEV_PER_INT     8 /* Maximum number of devices per interrupt line */
 
 //filter interrupt cause bits
 #define CAUSE_MASK                0x000000FF

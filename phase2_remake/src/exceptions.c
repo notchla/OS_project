@@ -284,9 +284,9 @@ int verhogen(state_t* callerState){
   semd_t* sem = getSemd(semkey);
   if(sem){
     pcb_t* unblocked = removeBlocked(semkey);
+    blockedCount--;
     if(unblocked) {
       schedInsertProc(unblocked);
-      processCount++;
     }
   }
   else{
@@ -329,6 +329,7 @@ int passeren(state_t* callerState){
   else{
     mymemcpy(&(currentProcess->p_s), callerState, sizeof(state_t));
     insertBlocked(sem, currentProcess);
+    blockedCount++;
     //need to call the scheduler
     return TRUE;
   }
@@ -342,18 +343,13 @@ void set_command(termreg_t* reg, unsigned int command, int subdevice){
 }
 
 void get_line_dev(termreg_t* reg, int* line, int* dev){
-  for (int i = 0; i < N_EXT_IL; i++){
-    for (int j = 0; j < N_DEV_PER_IL; j++){
-      if( reg == (termreg_t*) DEV_REG_ADDR(i + 3, j)){
-        *line = i + 3;
-        *dev = j;
-        return ;
-      }
-    }
-  }
+  unsigned int base_dev = DEV_REG_ADDR(DEV_UNUSED_INTS, 0);
+  unsigned int offset = ((unsigned int) reg) - base_dev;
+  unsigned int line_offset = (unsigned int) offset / DEV_REG_SIZE;
+  *line = (int) line_offset / DEV_PER_INT + DEV_UNUSED_INTS;
+  *dev = line_offset % DEV_PER_INT;
 }
 
-//TODO bloccare il processo che chiama la sys se il il device richiesto è in uso da un altro processo(controllare se un processo è bloccato nel semaforo).scrivere la getlinedev usando indirizzi di memoria facendo modulo e divisione
 int do_IO(state_t* callerState){
   unsigned int command;
   termreg_t *reg;
@@ -382,13 +378,14 @@ int do_IO(state_t* callerState){
   if(!subdevice) //if transmission
     line += 1;
 
-  int* s_key = &semdevices[(line-3)*DEV_PER_INT + dev];
+  int* s_key = &semdevices[(line-DEV_UNUSED_INTS)*DEV_PER_INT + dev];
 
   (*s_key)--;
 
   if((*s_key) < 0){
     mymemcpy(&(currentProcess->p_s), callerState, sizeof(*callerState));
     insertBlocked(s_key, currentProcess);
+    blockedCount++;
     return TRUE;
   }
   PANIC(); //S_KEY SHOULD NEVER BE >= 0

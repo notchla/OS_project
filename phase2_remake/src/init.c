@@ -36,7 +36,10 @@ void newProcess(memaddr functionAddr, int priority) {
   pcb_t* tempProcess = allocPcb();
   if(functionAddr == (memaddr) idle_proc)
     idle_ptr = tempProcess;
-  incProcCount();
+  else {
+    //not counting idle_proc in the active process count
+    processCount++;
+  }
   unsigned int addr = (RAMTOP - FRAME_SIZE*getProcCount());
   tempProcess-> priority = priority;
   tempProcess->original_priority = priority;

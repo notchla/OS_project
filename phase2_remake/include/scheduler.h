@@ -6,8 +6,8 @@
 extern struct list_head readyQueue;
 extern pcb_t* currentProcess;
 extern int processCount;
+extern int blockedCount;
 extern pcb_t* idle_ptr;
-// extern int  softBlockCount;
 
 //gestisce l'esecuzione dei processi tramite priorita e meccanismo di aging
 void scheduler();

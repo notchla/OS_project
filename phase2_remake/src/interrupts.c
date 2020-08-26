@@ -77,11 +77,12 @@ void ACKDevice(unsigned int* commandRegister) {
 
 void verhogenDevice(int line, unsigned int status, int deviceNumber) {
   if((line != 0) && (status != 0)) {
-    int *s_key = &semdevices[(line - 3)*DEV_PER_INT + deviceNumber];
+    int *s_key = &semdevices[(line - DEV_UNUSED_INTS)*DEV_PER_INT + deviceNumber];
     ++(*s_key);
     if(*s_key <= 0){
       pcb_t* waiting_proc = removeBlocked(s_key);
       set_return(&waiting_proc->p_s, status);
+      blockedCount--;
       schedInsertProc(waiting_proc);
     }
   }
