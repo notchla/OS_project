@@ -6,6 +6,7 @@ static LIST_HEAD(semdFree);//lista dei semafori liberi
 static LIST_HEAD(ASL);//lista dei semafori attivi
 
 int semdevices[(1 + DEV_USED_INTS) * DEV_PER_INT];
+semdev semDev;
 
 //reference : https://stackoverflow.com/questions/18851835/create-my-own-memset-function-in-c
 //fa un cast del puntatore alla struttura ad u_char e setta a 0 ogni byte che compone la struttura
@@ -27,7 +28,14 @@ void initASL(){
         INIT_LIST_HEAD(&semdFree_table[i].s_procQ);
         list_add_tail(&semdFree_table[i].s_next, &semdFree);
     }
-
+    for(int dev=0; dev < DEV_PER_INT; dev++) {
+      semDev.disk[dev].s_key = &semdevices[(DISK_LINE - LOWEST_LINE) * DEV_PER_INT + dev];
+      semDev.tape[dev].s_key = &semdevices[(TAPE_LINE - LOWEST_LINE) * DEV_PER_INT + dev];
+      semDev.network[dev].s_key = &semdevices[(NETWORK_LINE - LOWEST_LINE) * DEV_PER_INT + dev];
+      semDev.printer[dev].s_key = &semdevices[(PRINTER_LINE - LOWEST_LINE) * DEV_PER_INT + dev];
+      semDev.terminalR[dev].s_key = &semdevices[(TERMINAL_LINE - LOWEST_LINE) * DEV_PER_INT + dev];
+      semDev.terminalT[dev].s_key = &semdevices[(TERMINAL_LINE - LOWEST_LINE + 1) * DEV_PER_INT + dev];
+    }
 }
 
 //ritorna il semaforo con chiave key
@@ -120,10 +128,35 @@ pcb_t* removeBlocked(int* key){
             INIT_LIST_HEAD(&removed->p_next);
             if(list_empty(&ptr->s_procQ)){
                 list_del(&ptr->s_next);
+
                 ptr->s_key = NULL;
                 INIT_LIST_HEAD(&ptr->s_next);
                 INIT_LIST_HEAD(&ptr->s_procQ);
                 list_add_tail(&ptr->s_next,&semdFree);
+            }
+            return removed;
+        }
+        else
+            return NULL;
+
+    }
+    return NULL;
+}
+
+pcb_t* removeBlockedonDevice(int* key){
+    if(key == NULL)
+        return NULL;
+    semd_t* ptr = getSemd(key);
+    if(ptr!=NULL){
+        if(!list_empty(&ptr->s_procQ)){
+            pcb_t* removed = container_of(ptr->s_procQ.next, pcb_t, p_next);
+            removed->p_semkey = NULL;
+            list_del(ptr->s_procQ.next);
+            INIT_LIST_HEAD(&removed->p_next);
+            if(list_empty(&ptr->s_procQ)){
+                list_del(&ptr->s_next);
+                INIT_LIST_HEAD(&ptr->s_next);
+                INIT_LIST_HEAD(&ptr->s_procQ);
             }
             return removed;
         }

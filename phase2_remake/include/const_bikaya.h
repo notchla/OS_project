@@ -21,15 +21,6 @@
 #define EXC_BADPTE         13
 #define EXC_PTEMISS        14
 
-/* Interrupt lines used by the devices */
-#define INT_T_SLICE  1 /* time slice interrupt */
-#define INT_TIMER    2 /* timer interrupt */
-#define INT_LOWEST   3 /* minimum interrupt number used by real devices */
-#define INT_DISK     3
-#define INT_TAPE     4
-#define INT_UNUSED   5 /* network? */
-#define INT_PRINTER  6
-#define INT_TERMINAL 7
 
 #define FRAMESIZE 4096
 
@@ -60,7 +51,8 @@
 //syscall codes
 #define TERMINATE_PROCESS         3
 
-//interrupt lines
+//interrupt bits
+#define PROC_INT                  0x00000001
 #define LOCALTIME_INT             0x00000002
 #define INTERVALTIME_INT          0x00000004
 #define DISK_INT                  0x00000008
@@ -68,9 +60,17 @@
 #define NETWORK_INT               0x00000020
 #define PRINTER_INT               0x00000040
 #define TERM_INT                  0x00000080
+// Interrupt lines
+#define T_SLICE_LINE  1 /* time slice interrupt */
+#define TIMER_LINE    2 /* timer interrupt */
+#define LOWEST_LINE   3 /* minimum interrupt number used by real devices */
+#define DISK_LINE     3
+#define TAPE_LINE     4
+#define NETWORK_LINE   5 /* network? */
+#define PRINTER_LINE  6
+#define TERMINAL_LINE 7
 
 #define DEV_USED_INTS   5 /* Number of ints reserved for devices: 3,4,5,6,7 */
-#define DEV_UNUSED_INTS 3 /* Number of devices without reserved interrupt registers */
 #define DEV_PER_INT     8 /* Maximum number of devices per interrupt line */
 
 //filter interrupt cause bits

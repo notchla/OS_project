@@ -47,7 +47,6 @@ void syscallHandler() {
     PANIC();
   }
   syscallRequest = callerState-> a1;
-  // callerState-> pc = callerState-> pc + WORD_SIZE; NOT NEEDED IN UARM
   #endif
 
   void * requested_call = NULL;
@@ -112,24 +111,6 @@ void set_register(unsigned int reg, unsigned int val) {
   *(unsigned int*) reg = val;
 }
 
-void get_params(state_t* callerState, unsigned int* p1, unsigned int* p2, unsigned int* p3) {
-  #if TARGET_UMPS
-  if(p1 != NULL)
-    p1 = (unsigned int*) callerState->reg_a1;
-  if(p2 != NULL)
-    p2 = (unsigned int*) callerState->reg_a2;
-  if(p3 != NULL)
-    p3 = (unsigned int*) callerState->reg_a3;
-  #elif TARGET_UARM
-  if(p1 != NULL)
-    p1 = (unsigned int*) callerState->a2;
-  if(p2 != NULL)
-    p2 = (unsigned int*) callerState->a3;
-  if(p3 != NULL)
-    p3 = (unsigned int*) callerState->a4;
-  #endif
-}
-
 int kill(state_t* callerState) {
   pcb_t* kpid = NULL;
   unsigned int killed_current = FALSE;
@@ -178,10 +159,6 @@ void recursive_kill(pcb_t* process){
   if(process == NULL)
     return;
   pcb_t* child;
-  // list_for_each_entry(child, &process->p_child, p_sib){
-  //   // call on every branch
-  //   recursive_kill(child);
-  // }
   while(!list_empty(&process->p_child)){
     pcb_t* child = container_of(process->p_child.next, pcb_t, p_sib);
     recursive_kill(child);
@@ -192,12 +169,7 @@ void recursive_kill(pcb_t* process){
   outChild(process);
   if(process != currentProcess){
     outProcQ(&readyQueue, process);
-    // outChild(process);
   }
-  // else {
-  //   //current process cases
-  //   outChild(currentProcess);
-  // }
   freePcb(process);
   processCount = processCount - 1;
 }
@@ -254,25 +226,6 @@ int create_process(state_t* callerState){
   return FALSE;
 };
 
-// int verhogen(state_t* callerState){
-//   int* sem = NULL;
-//   #if TARGET_UMPS
-//   sem = (int*) callerState->reg_a1;
-//   #elif TARGET_UARM
-//   sem = (int*)  callerState->a2;
-//   #endif
-//   (*sem)++;
-//   if((*sem) <= 0) {
-//     pcb_t* unblocked = removeBlocked(sem);
-//     if(unblocked) {
-//       schedInsertProc(unblocked);
-//       processCount++;
-//     }
-//   }
-//   //return to caller
-//   return FALSE;
-// };
-
 int verhogen(state_t* callerState){
   int* semkey = NULL;
   #if TARGET_UMPS
@@ -296,24 +249,6 @@ int verhogen(state_t* callerState){
   return FALSE;
 }
 
-// int passeren(state_t* callerState){
-//   int* sem = NULL;
-//   #if TARGET_UMPS
-//   sem = (int*) callerState->reg_a1;
-//   #elif TARGET_UARM
-//   sem = (int*)  callerState->a2;
-//   #endif
-//   (*sem)--;
-//   if((*sem) < 0) {
-//     mymemcpy(&(currentProcess->p_s), callerState, sizeof(state_t));
-//     insertBlocked(sem, currentProcess);
-//     //need to call the scheduler
-//     return TRUE;
-//   }
-//   //return to caller
-//   return FALSE;
-// };
-
 int passeren(state_t* callerState){
   int* sem = NULL;
   #if TARGET_UMPS
@@ -335,56 +270,42 @@ int passeren(state_t* callerState){
   }
 }
 
-void set_command(termreg_t* reg, unsigned int command, int subdevice){
-  if(subdevice)
-    reg->recv_command = command;
-  else
-    reg->transm_command = command;
-}
-
-void get_line_dev(termreg_t* reg, int* line, int* dev){
-  unsigned int base_dev = DEV_REG_ADDR(DEV_UNUSED_INTS, 0);
-  unsigned int offset = ((unsigned int) reg) - base_dev;
-  unsigned int line_offset = (unsigned int) offset / DEV_REG_SIZE;
-  *line = (int) line_offset / DEV_PER_INT + DEV_UNUSED_INTS;
-  *dev = line_offset % DEV_PER_INT;
-}
-
 int do_IO(state_t* callerState){
   unsigned int command;
-  termreg_t *reg;
+  devreg_t *reg;
   int subdevice;
 
   #if TARGET_UMPS
   command = (unsigned int)callerState->reg_a1;
-  reg = (termreg_t*)callerState->reg_a2;
+  reg = (devreg_t*)callerState->reg_a2;
   subdevice = (int)callerState->reg_a3;
   #elif TARGET_UARM
   command = (unsigned int)callerState->a2;
-  reg = (termreg_t*)callerState->a3;
+  reg = (devreg_t*)callerState->a3;
   subdevice = (int)callerState->a4;
   #endif
 
-  unsigned int stat = get_status(reg, subdevice);
+  if((unsigned int) reg < DEV_REG_ADDR(TERMINAL_LINE, 0)) {
+    //generic device
+    subdevice = -1;
+  }
 
-  if (stat != 1 && stat != 5)
-    term_puts("device not ready");
+  unsigned int stat = get_status(reg, subdevice);
+  if (stat != ST_READY && stat != ST_TRANSMITTED)
+    //device not ready, return to caller
+    return FALSE;
 
   set_command(reg, command, subdevice);
-
   int line, dev;
   get_line_dev(reg, &line, &dev);
-
-  if(!subdevice) //if transmission
-    line += 1;
-
-  int* s_key = &semdevices[(line-DEV_UNUSED_INTS)*DEV_PER_INT + dev];
-
+  semd_t* sem = getSemDev(line, dev, subdevice);
+  int * s_key = sem->s_key;
+  debug(0, (int)s_key);
   (*s_key)--;
-
   if((*s_key) < 0){
     mymemcpy(&(currentProcess->p_s), callerState, sizeof(*callerState));
-    insertBlocked(s_key, currentProcess);
+    insertSem(sem);
+    insertBlocked(sem->s_key, currentProcess);
     blockedCount++;
     return TRUE;
   }
@@ -484,10 +405,6 @@ int passup_kill(state_t* callerState){
     if (kpid->p_semkey) {
       //process was blocked on a semaphore
       outBlocked(kpid);
-      if(kpid->p_semkey <= &(semdevices[0]) && kpid->p_semkey >= &(semdevices[(1 + DEV_USED_INTS) * DEV_PER_INT - 1])) {
-        // not blocked on device
-        *(kpid->p_semkey)++;
-      }
     }
     // remove killed process from parent
     outChild(kpid);
