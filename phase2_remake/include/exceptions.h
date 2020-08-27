@@ -23,6 +23,8 @@ int passeren(state_t* callerState);
 
 int get_pid_ppid(state_t* callerState);
 
+int custom_syscall(state_t* callerState);
+
 int do_IO(state_t* callerState);
 
 int spec_passup(state_t* callerState);

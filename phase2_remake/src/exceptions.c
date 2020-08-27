@@ -8,7 +8,16 @@
 #include "termprint.h"
 #include "asl.h"
 
+int trapHelper(state_t* callerState) {
+  if(currentProcess->pgtNew != NULL){
+    mymemcpy(currentProcess->pgtOld, callerState, sizeof(state_t));
+    return FALSE;
+  }
+  return TRUE;
+}
+
 void trapHandler() {
+  cpu_time start_time = update_user_time(currentProcess);
   state_t* callerState = NULL;
   #if TARGET_UMPS
   callerState = (state_t*) TRAP_OLDAREA;
@@ -16,18 +25,20 @@ void trapHandler() {
   callerState = (state_t*) PGMTRAP_OLDAREA;
   #endif
 
-  if(currentProcess->pgtNew != NULL){
-    mymemcpy(currentProcess->pgtOld, callerState, sizeof(state_t));
+  int call_sched = critical_wrapper(&trapHelper, callerState, start_time, currentProcess);
+
+  if(call_sched)
+    kill_current();
+  else
     LDST(currentProcess->pgtNew);
-  }
-  kill_current();
 }
 
 void syscallHandler() {
   cpu_time start_time = update_user_time(currentProcess);
 
   int syscallRequest = 0;
-
+  //custom syscall flag
+  int custom = FALSE;
   state_t* callerState = NULL;
 
   #if TARGET_UMPS
@@ -75,28 +86,24 @@ void syscallHandler() {
     case GETPID:
       requested_call = &get_pid_ppid;
     break;
-    //syscall not recognized
+    //syscall not recognized, checking form customs
     default: ;
-      state_t* callerState = NULL;
-      #if TARGET_UMPS
-      callerState = (state_t*) SYS_OLDAREA;
-      #elif TARGET_UARM
-      callerState = (state_t*) SYSBK_OLDAREA;
-      #endif
-
-      if(currentProcess->sysNew != NULL){
-        mymemcpy(currentProcess->sysOld, callerState, sizeof(state_t));
-        LDST(currentProcess->sysNew);
-      }
-      kill_current();
+      requested_call = &custom_syscall;
+      custom = TRUE;
     break;
   }
   int call_sched = critical_wrapper(requested_call, callerState, start_time, currentProcess);
-  if(call_sched)
-    //nothing to do
-    scheduler();
-  else
-    LDST(callerState);
+  if(call_sched) {
+    if(custom)
+      kill_current();
+    else
+      scheduler();
+  } else {
+    if(custom)
+      LDST(currentProcess->sysNew);
+    else
+      LDST(callerState);
+  }
 }
 int pid_in_readyQ(pcb_t* pid){
   pcb_t* ptr;
@@ -394,6 +401,20 @@ int get_pid_ppid(state_t* callerState){
   return FALSE;
 };
 
+int custom_syscall(state_t* callerState) {
+  callerState = NULL;
+  #if TARGET_UMPS
+  callerState = (state_t*) SYS_OLDAREA;
+  #elif TARGET_UARM
+  callerState = (state_t*) SYSBK_OLDAREA;
+  #endif
+  if(currentProcess->sysNew != NULL){
+    mymemcpy(currentProcess->sysOld, callerState, sizeof(state_t));
+    return FALSE;
+  }
+  return TRUE;
+}
+
 int passup_kill(state_t* callerState){
   set_return(callerState, -1);
   pcb_t* kpid = currentProcess;
@@ -434,15 +455,25 @@ void kill_current(){
     processCount = processCount - 1;
   }
   //the current process was terminated the scheduler gains control
+  //the time is not updated because the current process is no more
   scheduler();
 }
 
-void TLBManager() {
-  state_t* callerState = NULL;
-  callerState = (state_t*) TLB_OLDAREA;
+int TLBHelper(state_t* callerState) {
   if(currentProcess->TlbNew != NULL){
     mymemcpy(currentProcess->TlbOld, callerState, sizeof(state_t));
-    LDST(currentProcess->TlbNew);
+    return FALSE;
   }
-  kill_current();
+  return TRUE;
+}
+
+void TLBManager() {
+  cpu_time start_time = update_user_time(currentProcess);
+  state_t* callerState = NULL;
+  callerState = (state_t*) TLB_OLDAREA;
+  int call_sched = critical_wrapper(&TLBHelper, callerState, start_time, currentProcess);
+  if(call_sched)
+    kill_current();
+  else
+    LDST(currentProcess->TlbNew);
 }
