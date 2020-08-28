@@ -17,10 +17,7 @@ void schedInsertProc(pcb_t* process){
     insertProcQ(&readyQueue, process);
 }
 
-int getProcCount(){
-    return processCount;
-}
-
+//performs aging on all the processes except for idle_proc
 void aging(){
   pcb_t* ptr;
   list_for_each_entry(ptr, &readyQueue, p_next){

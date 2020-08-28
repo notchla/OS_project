@@ -1,8 +1,15 @@
+/* functions to handle the various interrupts of the Kaya system */
+
 #ifndef _INTERRUPTS_H
 #define _INTERRUPTS_H
 
 #include "system.h"
 
+/*
+ * main handler.
+ * Evoked when a interrupt arises. Marshals the incoming request and call the
+ * dedicated sub-handler following the interrupt priority.
+ */
 void interruptHandler();
 //interval timer handler
 int timerHandler(state_t* oldstatus);
@@ -15,8 +22,7 @@ int termHandler(state_t* oldstatus);
 
 //helper methods
 void devHandler(int line, state_t* oldstatus);
+//perform handler closing operations
 void exitInterrupt(state_t* oldstatus);
-void verhogenDevice(int line, unsigned int status, int deviceNumber, int read);
-void ACKDevice(unsigned int* commandRegister);
 
 #endif

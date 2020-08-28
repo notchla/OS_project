@@ -40,7 +40,7 @@ void newProcess(memaddr functionAddr, int priority) {
     //not counting idle_proc in the active process count
     processCount++;
   }
-  unsigned int addr = (RAMTOP - FRAME_SIZE*getProcCount());
+  unsigned int addr = (RAMTOP - FRAME_SIZE * processCount);
   tempProcess-> priority = priority;
   tempProcess->original_priority = priority;
 

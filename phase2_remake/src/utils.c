@@ -99,10 +99,30 @@ void verhogenKill(pcb_t* process) {
   int * sem = process->p_semkey;
   if (sem) {
     //process was blocked on a semaphore
-    outBlocked(process);
     //the s_key are in progressive, sequential memory areas by declaration
     if(sem >= getSemDev(LOWEST_LINE, 0, 0)->s_key && sem <= getSemDev(TERMINAL_LINE, DEV_PER_INT, 0)->s_key) {
+      outBlocked(process);
       blockedCount--;
+    } else {
+      outBlocked(process);
+    }
+  }
+}
+
+void ACKDevice(unsigned int* commandRegister) {
+  if(commandRegister)
+    *commandRegister = CMD_ACK;
+}
+
+void verhogenDevice(int line, unsigned int status, int deviceNumber, int read) {
+  if((line != 0) && (status != 0)) {
+    int *s_key = (getSemDev(line, deviceNumber, read))->s_key;
+    ++(*s_key);
+    if(*s_key <= 0){
+      pcb_t* waiting_proc = removeBlockedonDevice(s_key);
+      set_return(&waiting_proc->p_s, status);
+      blockedCount--;
+      schedInsertProc(waiting_proc);
     }
   }
 }

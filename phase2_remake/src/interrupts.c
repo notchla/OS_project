@@ -5,8 +5,6 @@
 #include "asl.h"
 #include "pcb.h"
 
-// #include "termprint.h"
-
 void interruptHandler() {
   cpu_time start_time = update_user_time(currentProcess);
   void* requested_handler = NULL;
@@ -116,24 +114,6 @@ void devHandler(int line, state_t* oldstatus) {
     verhogenDevice(line, status, deviceNumber, read);
   }
   exitInterrupt(oldstatus);
-}
-
-void ACKDevice(unsigned int* commandRegister) {
-  if(commandRegister)
-    *commandRegister = CMD_ACK;
-}
-
-void verhogenDevice(int line, unsigned int status, int deviceNumber, int read) {
-  if((line != 0) && (status != 0)) {
-    int *s_key = (getSemDev(line, deviceNumber, read))->s_key;
-    ++(*s_key);
-    if(*s_key <= 0){
-      pcb_t* waiting_proc = removeBlockedonDevice(s_key);
-      set_return(&waiting_proc->p_s, status);
-      blockedCount--;
-      schedInsertProc(waiting_proc);
-    }
-  }
 }
 
 void exitInterrupt(state_t* oldstatus) {
