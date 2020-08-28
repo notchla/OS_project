@@ -30,7 +30,7 @@ void interruptHandler() {
     //unused
     //do nothing and pass
   } else if (cause & INTERVALTIME_INT) {
-    requested_handler = &timeHandler;
+    requested_handler = &timerHandler;
   } else if(cause & DISK_INT) {
     requested_handler = &diskHandler;
   } else if (cause & TAPE_INT) {
@@ -52,9 +52,9 @@ void interruptHandler() {
 
 /* specific device handlers */
 
-void exitInterrupt(state_t* oldstatus) {
-  mymemcpy(&currentProcess->p_s, oldstatus, sizeof(*oldstatus));
-  schedInsertProc(currentProcess);
+int timerHandler(state_t* oldstatus) {
+  exitInterrupt(oldstatus);
+  return 0;
 }
 
 int diskHandler(state_t* oldstatus) {
@@ -127,7 +127,6 @@ void verhogenDevice(int line, unsigned int status, int deviceNumber, int read) {
   if((line != 0) && (status != 0)) {
     int *s_key = (getSemDev(line, deviceNumber, read))->s_key;
     ++(*s_key);
-    debug(1, (int)s_key);
     if(*s_key <= 0){
       pcb_t* waiting_proc = removeBlockedonDevice(s_key);
       set_return(&waiting_proc->p_s, status);
@@ -137,42 +136,7 @@ void verhogenDevice(int line, unsigned int status, int deviceNumber, int read) {
   }
 }
 
-int timeHandler(state_t* oldstatus) {
-  exitInterrupt(oldstatus);
-  return 0;
-}
-
-int getDeviceNumber(int line){
-  unsigned int* bitmap = (unsigned int *) CDEV_BITMAP_ADDR(line);
-  unsigned int cause = *bitmap;
-  //find interrupt line (exponent) of the lowest set bit. preserves priority order
-  unsigned int devNum = log2(lowest_set(cause));
-
-  if((devNum < 0) || (devNum > TERMINAL_LINE)) {
-    return -1;
-  } else {
-    return(devNum);
-  }
-}
-
-int lowest_set(int number){
-  return (number & -number);
-}
-
-int log2(unsigned int n){
-  // very inefficient
-  if(n > 1) {
-    return(1 + log2(n/2));
-  } else {
-    return 0;
-  }
-}
-
-unsigned int tx_status(termreg_t *tp)
-{
-    return ((tp->transm_status));
-}
-
-unsigned int rx_status(termreg_t *tp){
-  return ((tp->recv_status));
+void exitInterrupt(state_t* oldstatus) {
+  mymemcpy(&currentProcess->p_s, oldstatus, sizeof(*oldstatus));
+  schedInsertProc(currentProcess);
 }

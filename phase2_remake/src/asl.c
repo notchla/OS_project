@@ -1,5 +1,5 @@
 #include "asl.h"
-#include "const.h"
+#include "const_bikaya.h"
 #include "utils.h"
 
 static LIST_HEAD(semdFree);//lista dei semafori liberi

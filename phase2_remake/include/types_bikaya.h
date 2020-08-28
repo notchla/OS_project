@@ -13,7 +13,7 @@
 #include "uarm/uARMconst.h"
 #endif
 
-#include "const.h"
+#include "const_bikaya.h"
 #include "listx.h"
 
 typedef unsigned int memaddr;

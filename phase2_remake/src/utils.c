@@ -9,16 +9,6 @@ void mymemcpy(void *dest, void *src, int n){
   }
 }
 
-/* critical_wrapper tracks kernel/user time in a tidy way.
-*  inputs:
-*   _ call: a pointer to the requested system call (null if updating from interrupt);
-*   _ callerState: state vector of the caller process;
-*   _ start_time: TOD saved at the beginning of the critical section;
-*   _ currentProcess: process control block of the calling process.
-*  outputs:
-*   _ call_sched: forwards the bool returned by the calls.
-*/
-
 int critical_wrapper(int (*call)(), state_t* callerState, cpu_time start_time, pcb_t* currentProcess) {
   int call_sched = 0;
   if (call) {
@@ -26,10 +16,12 @@ int critical_wrapper(int (*call)(), state_t* callerState, cpu_time start_time, p
     call_sched = call(callerState);
   }
   cpu_time end_time = *((unsigned int *)BUS_REG_TOD_LO);
-  //save the time of the last context switch to user mode
-  currentProcess->last_restart = end_time;
-  //update the currentProcess kernel time
-  currentProcess->kernel_timer = currentProcess->kernel_timer + end_time - start_time;
+  if(currentProcess != NULL) {
+    //save the time of the last context switch to user mode
+    currentProcess->last_restart = end_time;
+    //update the currentProcess kernel time
+    currentProcess->kernel_timer = currentProcess->kernel_timer + end_time - start_time;
+  }
   return call_sched;
 }
 
@@ -78,9 +70,6 @@ unsigned int get_status(devreg_t* reg, int subdevice){
 
 
 semd_t *getSemDev(int line, int devnum, int read) {
-  debug(3,line);
-  debug(4,read);
-  debug(5,devnum);
   switch (line) {
     case DISK_LINE:
       return &semDev.disk[devnum];
@@ -104,6 +93,71 @@ semd_t *getSemDev(int line, int devnum, int read) {
       return NULL;
     break;
   }
+}
+
+void verhogenKill(pcb_t* process) {
+  int * sem = process->p_semkey;
+  if (sem) {
+    //process was blocked on a semaphore
+    outBlocked(process);
+    //the s_key are in progressive, sequential memory areas by declaration
+    if(sem >= getSemDev(LOWEST_LINE, 0, 0)->s_key && sem <= getSemDev(TERMINAL_LINE, DEV_PER_INT, 0)->s_key) {
+      blockedCount--;
+    }
+  }
+}
+
+int pid_in_readyQ(pcb_t* pid) {
+  pcb_t* ptr;
+  list_for_each_entry(ptr, &readyQueue, p_next){
+    if (ptr == pid)
+      return 1;
+  }
+  return 0;
+}
+
+int set_register(unsigned int reg, unsigned int val) {
+  if(reg) {
+    *(unsigned int*) reg = val;
+    return FALSE;
+  } else {
+    return TRUE;
+  }
+}
+
+
+int getDeviceNumber(int line){
+  unsigned int* bitmap = (unsigned int *) CDEV_BITMAP_ADDR(line);
+  unsigned int cause = *bitmap;
+  //find interrupt line (exponent) of the lowest set bit. preserves priority order
+  unsigned int devNum = log2(lowest_set(cause));
+
+  if((devNum < 0) || (devNum > TERMINAL_LINE)) {
+    return -1;
+  } else {
+    return(devNum);
+  }
+}
+
+int lowest_set(int number){
+  return (number & -number);
+}
+
+int log2(unsigned int n){
+  // very inefficient
+  if(n > 1) {
+    return(1 + log2(n/2));
+  } else {
+    return 0;
+  }
+}
+
+unsigned int tx_status(termreg_t *tp) {
+    return ((tp->transm_status));
+}
+
+unsigned int rx_status(termreg_t *tp) {
+  return ((tp->recv_status));
 }
 
 void debug(int id, int val){

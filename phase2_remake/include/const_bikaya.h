@@ -21,16 +21,17 @@
 #define EXC_BADPTE         13
 #define EXC_PTEMISS        14
 
-
 #define FRAMESIZE 4096
-
-
 #endif
 
 #ifdef TARGET_UARM
 #include "uarm/uARMconst.h"
+//archidecture specific custom macros
+/* returns the complete cause vector */
+#define CAUSE_ALL_GET(cause) ((cause & 0xFF000000) >> 24)
 #endif
 
+/* system generic constants */
 
 /* nucleus (phase2)-handled SYSCALL values */
 #define GETCPUTIME       1
@@ -47,9 +48,6 @@
 #define FALSE            0
 
 #define TIME_SLICE 3000  //time slice in us
-
-//syscall codes
-#define TERMINATE_PROCESS         3
 
 //interrupt bits
 #define PROC_INT                  0x00000001
@@ -76,14 +74,8 @@
 //filter interrupt cause bits
 #define CAUSE_MASK                0x000000FF
 
-//archidecture specific custom macros
-#ifdef TARGET_UARM
-/* returns the complete cause vector */
-#define CAUSE_ALL_GET(cause) ((cause & 0xFF000000) >> 24)
-#endif
 
 #define TERM_STATUS_MASK   0xFF
-
 //device status
 #define ST_READY           1
 #define ST_BUSY            3
@@ -92,5 +84,17 @@
 //device commands
 #define CMD_ACK            1
 #define CMD_TRANSMIT       2
+/* Maxi number of overall (eg, system, daemons, user) concurrent processes */
+#define MAXPROC 20
+#define UPROCMAX 3  /* number of usermode processes (not including master proc and system daemons */
+#define	HIDDEN static
+#define	TRUE 	1
+#define	FALSE	0
+#define ON 	1
+#define OFF 	0
+#define EOS '\0'
+#define DEV_PER_INT 8 /* Maximum number of devices per interrupt line */
+#define CR 0x0a   /* carriage return as returned by the terminal */
+
 
 #endif

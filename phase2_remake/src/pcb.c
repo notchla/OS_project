@@ -1,5 +1,5 @@
 #include "pcb.h"
-#include "const.h"
+#include "const_bikaya.h"
 
 static LIST_HEAD(pcbFree);
 
