@@ -12,9 +12,9 @@
 int trapHelper(state_t* callerState) {
   if(currentProcess->pgtNew != NULL){
     mymemcpy(currentProcess->pgtOld, callerState, sizeof(state_t));
-    return FALSE;
+    return FALSE;//hanlder is definced
   }
-  return TRUE;
+  return TRUE;//hanlder is not defined
 }
 
 void trapHandler() {
@@ -28,12 +28,12 @@ void trapHandler() {
 
   int call_sched = critical_wrapper(&trapHelper, callerState, start_time, currentProcess);
 
-  if(call_sched) {
+  if(call_sched) {//handler is not defined, process is killed
     recursive_kill(currentProcess);
     scheduler();
   }
   else
-    LDST(currentProcess->pgtNew);
+    LDST(currentProcess->pgtNew);//load the hanlder
 }
 
 /*--------------------------------------------------------------------------------------------------*/
@@ -91,7 +91,7 @@ void syscallHandler() {
     case GETPID:
       requested_call = &get_pid_ppid;
     break;
-    //syscall not recognized, checking form customs
+    //syscall not recognized, checking form custom
     default: ;
       requested_call = &custom_syscall;
       custom = TRUE;
@@ -118,7 +118,7 @@ int get_cpu_time(state_t* callerState){
   cpu_time time = *(unsigned int*) BUS_REG_TOD_LO;
   #if TARGET_UMPS
   set_register(callerState->reg_a3, time - currentProcess->first_activation);
-  //current kernel time, countinmg the time elapsed until the call
+  //current kernel time, counting the time elapsed until the call
   set_register(callerState->reg_a2, currentProcess->kernel_timer + time - currentProcess->last_stop);
   set_register(callerState->reg_a1, currentProcess->user_timer);
   #elif TARGET_UARM
@@ -184,7 +184,7 @@ int kill(state_t* callerState) {
     killed_current = TRUE;
   }
   // kpid is neither in readyqeue nor blocked on a semaphore; kpid is not a valid pcb
-  else if(!pid_in_readyQ(kpid) && !isBlocked(kpid)){//si potrebbe fare che isblocked ritorni il semaforo in cui kpid è bloccato
+  else if(!pid_in_readyQ(kpid) && !isBlocked(kpid)){
     set_return(callerState, -1);
     return FALSE;
   }
@@ -214,7 +214,6 @@ int kill(state_t* callerState) {
 void recursive_kill(pcb_t* process){
   if(process == NULL)
     return;
-  pcb_t* child;
   while(!list_empty(&process->p_child)){
     pcb_t* child = container_of(process->p_child.next, pcb_t, p_sib);
     recursive_kill(child);

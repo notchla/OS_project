@@ -101,7 +101,7 @@ void verhogenKill(pcb_t* process) {
     //process was blocked on a semaphore
     //the s_key are in progressive, sequential memory areas by declaration
     if(sem >= getSemDev(LOWEST_LINE, 0, 0)->s_key && sem <= getSemDev(TERMINAL_LINE, DEV_PER_INT, 0)->s_key) {
-      outBlocked(process);
+      DevicesOutBlocked(process);
       blockedCount--;
     } else {
       outBlocked(process);

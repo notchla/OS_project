@@ -20,7 +20,6 @@ void *my_memset_sem(void *struct_ptr, int c, int len){
     return struct_ptr;
 }
 
-//inizializza l' array dei semafori e inserisci i semafori nella lista dei semafori liberi
 void initASL(){
     static semd_t semdFree_table[MAXPROC];
     for (int i = 0; i < MAXPROC; i++)
@@ -38,7 +37,6 @@ void initASL(){
     }
 }
 
-//ritorna il semaforo con chiave key
 semd_t* getSemd(int* key){
     if(key == NULL)
         return NULL;
@@ -50,7 +48,7 @@ semd_t* getSemd(int* key){
     return NULL;
 }
 
-//se semdfree non e' libera ritorna il primo semaforo libero nella lista con tutti i suoi valori inizializati a zero
+//if semdfree isn't empty return the first free semaphore in the list with all his values initialized to zero
 semd_t* allocSemd(){
     if(list_empty(&semdFree))
         return NULL;
@@ -64,7 +62,6 @@ semd_t* allocSemd(){
     }
 }
 
-//inserisce con costo O(n) il semaforo nella lista di priorita dei semafori attivi,la priorita e' dettata da s_key
 void insertSem(semd_t* semaphore){
     if (semaphore == NULL)
         return;
@@ -75,10 +72,9 @@ void insertSem(semd_t* semaphore){
             return;
         }
     }
-    list_add_tail(&semaphore->s_next,&ASL);//semaphore ha priorita minima
+    list_add_tail(&semaphore->s_next,&ASL);//semaphore has least priority
 }
 
-//inserisci il pcb puntato da p in coda alla coda dei processi bloccati dal semaforo con chiave pari a key
 int insertBlocked(int* key, pcb_t* p){
     if(key == NULL || p == NULL)
         return 0;
@@ -88,21 +84,23 @@ int insertBlocked(int* key, pcb_t* p){
         if(ptr->s_procQ.next == NULL)
             INIT_LIST_HEAD(&ptr->s_procQ);
         p->p_semkey = key;
-        if(p->p_next.next->prev == &p->p_next && p->p_next.prev->next == &p->p_next){//controllo su pcb per vedere se appartiene gia ad una lista.se pcb appartiene ad una lista chiamiamo list_del su p->next per non invalidare la lista a cui apparteneva
+        //check if p_next is already used to connect p in a list, if this is true we need to call list_del on p_next before we connect it to the other list, to not invalidate the original list
+        if(p->p_next.next->prev == &p->p_next && p->p_next.prev->next == &p->p_next){
             list_del(&p->p_next);
             INIT_LIST_HEAD(&p->p_next);
         }
         list_add_tail(&p->p_next,&ptr->s_procQ);
         return 0;
     }
-    //se un semaforo con s_key = key non e' presente in asl,ne allochiamo uno
+    //if a semaphore with s_key == key isn't present in ASL, we allocat one
     semd_t* semaphore = allocSemd();
     if(semaphore != NULL){
         semaphore->s_key = key;
         INIT_LIST_HEAD(&semaphore->s_procQ);
         insertSem(semaphore);
         p->p_semkey = key;
-        if(p->p_next.next->prev == &p->p_next && p->p_next.prev->next == &p->p_next){//controllo su pcb per vedere se appartiene gia ad una lista.se pcb appartiene ad una lista chiamiamo list_del su p->next per non invalidare la lista a cui apparteneva
+        //check if p_next is already used to connect p in a list, if this is true we need to call list_del on p_next before we connect it to the other list, to not invalidate the original list
+        if(p->p_next.next->prev == &p->p_next && p->p_next.prev->next == &p->p_next){
             list_del(&p->p_next);
             INIT_LIST_HEAD(&p->p_next);
         }
@@ -110,10 +108,9 @@ int insertBlocked(int* key, pcb_t* p){
         return 0;
     }
     else
-        return 1;//semaphore non puo essere allocato
+        return 1;//semaphore can't be allocated
 }
 
-//rimuove il primo pcd bloccato dal semaforo con coda pari a key, se la coda diventa vuota il semaforo viene rimosso da asl e inserito in semdfree
 pcb_t* removeBlocked(int* key){
     if(key == NULL)
         return NULL;
@@ -167,18 +164,40 @@ pcb_t* removeBlockedonDevice(int* key){
     return NULL;
 }
 
-//rimuove il processo puntato da p dal suo semaforo, se la coda diventa vuota il semaforo viene rimmosso da asl e inserito in semdfree. se il semaforo indicato da semkey non contiene il processo ritorna null
+pcb_t* DevicesOutBlocked(pcb_t* p){
+    if(p == NULL || p->p_semkey == NULL)
+        return NULL;
+    semd_t* ptr = getSemd(p->p_semkey);
+    if(ptr!=NULL){
+        pcb_t* temp;
+        list_for_each_entry(temp,&ptr->s_procQ,p_next){
+            if(temp == p){
+                list_del(&temp->p_next);
+                p->p_semkey = NULL;
+                if(list_empty(&ptr->s_procQ)){
+                    list_del(&ptr->s_next);
+                    INIT_LIST_HEAD(&ptr->s_next);
+                    INIT_LIST_HEAD(&ptr->s_procQ);
+                }
+                return p;
+            }
+        }
+        return NULL;
+    }
+    return NULL;
+}
+
 pcb_t* outBlocked(pcb_t* p){
     if(p == NULL || p->p_semkey == NULL)
         return NULL;
     semd_t* ptr = getSemd(p->p_semkey);
     if(ptr!=NULL){
         pcb_t* temp;
-        list_for_each_entry(temp,&ptr->s_procQ,p_next){//cicla sui processi bloccati dal semaforo con s_key == p->semkey
+        list_for_each_entry(temp,&ptr->s_procQ,p_next){
             if(temp == p){
-                list_del(&temp->p_next);//rimuove il pcb dalla coda dei processi bloccati
+                list_del(&temp->p_next);
                 p->p_semkey = NULL;
-                if(list_empty(&ptr->s_procQ)){//se la coda e' vuota elimino il semaforo e lo restituisco a semfree
+                if(list_empty(&ptr->s_procQ)){
                     list_del(&ptr->s_next);
                     ptr->s_key = NULL;
                     INIT_LIST_HEAD(&ptr->s_next);
@@ -193,14 +212,13 @@ pcb_t* outBlocked(pcb_t* p){
     return NULL;
 }
 
-//returns true if a process is found blocked on a semaphore
 unsigned int isBlocked(pcb_t* p){
     if(p == NULL || p->p_semkey == NULL)
         return FALSE;
     semd_t* ptr = getSemd(p->p_semkey);
     if(ptr!=NULL){
         pcb_t* temp;
-        list_for_each_entry(temp,&ptr->s_procQ,p_next){//cicla sui processi bloccati dal semaforo con s_key == p->semkey
+        list_for_each_entry(temp,&ptr->s_procQ,p_next){
             if(temp == p){
                 return TRUE;
             }
@@ -210,20 +228,18 @@ unsigned int isBlocked(pcb_t* p){
     return FALSE;
 }
 
-//ritorna il puntatore al primo processo puntato dal semaforo con chiave pari a key
 pcb_t* headBlocked(int* key){
     if(key == NULL)
         return NULL;
     semd_t* ptr = getSemd(key);
     if(ptr!=NULL){
-        if(list_empty(&ptr->s_procQ))//se la lista dei processi bloccati da ptr e' vuota ritorna null
+        if(list_empty(&ptr->s_procQ))
             return NULL;
-        return container_of(ptr->s_procQ.next, pcb_t, p_next);//ritorna il primo pcb bloccato dal semaforo
+        return container_of(ptr->s_procQ.next, pcb_t, p_next);
     }
     return NULL;
 }
 
-//rimozione di p e di tutti i processi radicati in p dai propri semafori
 void outChildBlocked(pcb_t* p){
     if(p == NULL)
         return;

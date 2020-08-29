@@ -28,7 +28,7 @@ void aging(){
 
 void scheduler(){
   if(!emptyProcQ(&readyQueue)) {
-    /* order of these operations is IMPORTANT */
+    /* order of these operations is IMPORTANT, halt condition must be verified before deadlock condition*/
     currentProcess = removeProcQ(&readyQueue);
     // the only active process is idle_proc, system now waiting
     if(currentProcess == idle_ptr) {

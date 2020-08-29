@@ -29,7 +29,7 @@ ENV = {
         "ENV": os.environ,
         "CPPPATH": ['uarm', 'uarm/uarm', 'include'],
         "ASFLAGS": ['-mcpu=arm7tdmi', '-I{}/uarm'.format(UARMDIR)],
-        "CCFLAGS": ['-Wall', '-O0', '-mcpu=arm7tdmi', "-DTARGET_UARM=1", '-Wno-builtin-declaration-mismatch'],
+        "CCFLAGS": ['-Wall', '-O0', '-mcpu=arm7tdmi', "-DTARGET_UARM=1"],
         "LINKFLAGS": [
             '-G0',
             '-nostdlib',
