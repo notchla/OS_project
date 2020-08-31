@@ -214,7 +214,7 @@ int kill(state_t* callerState) {
 void recursive_kill(pcb_t* process){
   if(process == NULL)
     return;
-  while(!list_empty(&process->p_child)){
+  while(!emptyChild(process)){
     pcb_t* child = container_of(process->p_child.next, pcb_t, p_sib);
     recursive_kill(child);
   }
