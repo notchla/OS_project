@@ -18,4 +18,3 @@ In order to ease the developement and testing, those system will be virtualized 
 ## Contributors:
 - Lorenzo Liso
 - Gianluca Galletti
-- Raffaello Balica
