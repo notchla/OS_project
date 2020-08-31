@@ -5,10 +5,7 @@
 #include "types_bikaya.h"
 #include "system.h"   //include target libs
 #include "scheduler.h"
-#include "p2test_bikaya_v0.2.h"
-
-//total number of devices + 1 for timer
-int semDev[DEV_USED_INTS * DEV_PER_INT + 1];
+#include "p2test_bikaya_v0.3.h"
 
 #if TARGET_UMPS
 void newArea(unsigned int address, unsigned int handler) {
@@ -31,22 +28,30 @@ void newArea(unsigned int address, unsigned int handler) {
 }
 #endif
 
+void idle_proc(){
+  WAIT();
+}
+
 void newProcess(memaddr functionAddr, int priority) {
   pcb_t* tempProcess = allocPcb();
-  incProcCount();
-  unsigned int addr = (RAMTOP - FRAMESIZE*getProcCount());
+  if(functionAddr == (memaddr) idle_proc)
+    idle_ptr = tempProcess;
+  else {
+    //not counting idle_proc in the active process count
+    processCount++;
+  }
+  unsigned int addr = (RAMTOP - FRAME_SIZE * processCount);
   tempProcess-> priority = priority;
   tempProcess->original_priority = priority;
-  tempProcess->first_activation = 0;
 
   #if TARGET_UMPS
   tempProcess-> p_s.reg_sp = addr;
-  tempProcess-> p_s.status = ALLOFF | IEON | IEMASK; //IE mask must be active for every interrupts for this phase
+  tempProcess-> p_s.status = ALLOFF | IEON | IEMASK;
   tempProcess-> p_s.pc_epc = functionAddr;
   tempProcess-> p_s.reg_t9 = functionAddr;
   #elif TARGET_UARM
   tempProcess-> p_s.sp = addr;
-  tempProcess-> p_s.cpsr = STATUS_ENABLE_TIMER(STATUS_ALL_INT_DISABLE(STATUS_SYS_MODE)); //timer interrupts need to be on
+  tempProcess-> p_s.cpsr = STATUS_ALL_INT_ENABLE(STATUS_SYS_MODE); //timer interrupts need to be on
   tempProcess-> p_s.pc = functionAddr;
   tempProcess-> p_s.ip = functionAddr;
   tempProcess-> p_s.CP15_Control = CP15_CONTROL_NULL;  //VM disabled
@@ -81,13 +86,11 @@ void initROM() {
 void initData() {
   initPcbs();
   initASL();
-
-  for(int i = 0; i <= DEV_USED_INTS * DEV_PER_INT; i++)
-    semDev[i] = 0;
 }
 
 void initialProcess() {
   newProcess((memaddr) test, 1);
+  newProcess((memaddr)idle_proc, -1); //least priority
 }
 
 int main() {

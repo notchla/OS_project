@@ -1,3 +1,4 @@
+/* scheduler function and additional helper */
 #ifndef _SCHED_
 #define _SCHED_
 #include "types_bikaya.h"
@@ -6,16 +7,12 @@
 extern struct list_head readyQueue;
 extern pcb_t* currentProcess;
 extern int processCount;
-extern int  softBlockCount;
+extern int blockedCount;
+extern pcb_t* idle_ptr;
 
-void mymemcpy(void *dest, void *src, int n);
-//gestisce l'esecuzione dei processi tramite priorita e meccanismo di aging
+//manages the process execution using a simple round-robin preemptive scheduler, with priority and aging
 void scheduler();
-//incrementa il numero di processi
-void incProcCount();
-//inserisce un processo nella ready queue
+//inserts a process to the readyQueue
 void schedInsertProc(pcb_t* process);
-//ritorna il numero di processi
-int getProcCount();
 
 #endif

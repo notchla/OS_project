@@ -1,9 +1,7 @@
-#ifndef __TEST_H_
-#define __TEST_H_
+#ifndef _TEST_
+#define _TEST_
 
-#include "termprint.h"
-
-//not included in p2test
+void test();
 #define TOD_LO     *((unsigned int *)BUS_REG_TOD_LO)
 #define TIME_SCALE *((unsigned int *)BUS_REG_TIME_SCALE)
 #define RAMBASE    *((unsigned int *)BUS_REG_RAM_BASE)
@@ -11,7 +9,4 @@
 #define RAMTOP     (RAMBASE + RAMSIZE)
 
 
-void test();
-void p2(), p3();
-
-#endif // MACRO
+#endif

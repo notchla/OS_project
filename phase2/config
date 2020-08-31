@@ -1,6 +1,6 @@
 {
     "boot": {
-        "core-file": "/home/notchla/Documents/OS_project/phase2/build/umps/kernel.core.umps",
+        "core-file": "/home/notchla/Documents/OS_project/phase2_remake/build/umps/kernel.core.umps",
         "load-core-file": true
     },
     "bootstrap-rom": "/usr/local/share/umps2/coreboot.rom.umps",
@@ -16,7 +16,7 @@
     "num-ram-frames": 64,
     "symbol-table": {
         "asid": 64,
-        "file": "/home/notchla/Documents/OS_project/phase2/build/umps/kernel.stab.umps"
+        "file": "/home/notchla/Documents/OS_project/phase2_remake/build/umps/kernel.stab.umps"
     },
     "tlb-size": 16
 }

@@ -12,8 +12,8 @@ MPSTC = 'mipsel-linux-gnu-'
 UMPSDIR = 'umps'
 UMPSLD = '{}/umpscore.ldscript'.format(UMPSDIR)
 UMPSFLAGS = [
-    '-mips1', '-mabi=32', '-mno-gpopt', '-G0', '-mno-abicalls', '-fno-pic', '-fno-stack-protector',
-    '-mfp32', '-I{}/umps'.format(UMPSDIR), '-Wno-builtin-declaration-mismatch'
+    '-mips1', '-mabi=32', '-mno-gpopt', '-G0', '-mno-abicalls', '-fno-pic',
+    '-mfp32', '-I{}/umps'.format(UMPSDIR)
 ]
 
 BUILD_DIR = "build"

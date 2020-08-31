@@ -1,14 +1,24 @@
 #include "exceptions.h"
 #include "scheduler.h"
 #include "pcb.h"
-#include "asl.h"
 #include "listx.h"
 #include "system.h"
 #include "types_bikaya.h"
 #include "utils.h"
 #include "termprint.h"
+#include "asl.h"
+
+//trap exceptions handler
+int trapHelper(state_t* callerState) {
+  if(currentProcess->pgtNew != NULL){
+    mymemcpy(currentProcess->pgtOld, callerState, sizeof(state_t));
+    return FALSE;//hanlder is definced
+  }
+  return TRUE;//hanlder is not defined
+}
 
 void trapHandler() {
+  cpu_time start_time = update_user_time(currentProcess);
   state_t* callerState = NULL;
   #if TARGET_UMPS
   callerState = (state_t*) TRAP_OLDAREA;
@@ -16,20 +26,25 @@ void trapHandler() {
   callerState = (state_t*) PGMTRAP_OLDAREA;
   #endif
 
-  if(currentProcess->pgtNew != NULL){
-    mymemcpy(currentProcess->pgtOld, callerState, sizeof(state_t));
-    LDST(currentProcess->pgtNew);
+  int call_sched = critical_wrapper(&trapHelper, callerState, start_time, currentProcess);
+
+  if(call_sched) {//handler is not defined, process is killed
+    recursive_kill(currentProcess);
+    scheduler();
   }
-  //TODO: time handling
-  kill(NULL);
+  else
+    LDST(currentProcess->pgtNew);//load the hanlder
 }
 
+/*--------------------------------------------------------------------------------------------------*/
+//syscall exceptions handler
 void syscallHandler() {
-  //save time at the beginning of the kernel code
-  unsigned int start_time = update_user_time(currentProcess);
+  cpu_time start_time = update_user_time(currentProcess);
 
-  state_t* callerState = NULL;
   int syscallRequest = 0;
+  //custom syscall flag
+  int custom = FALSE;
+  state_t* callerState = NULL;
 
   #if TARGET_UMPS
   callerState = (state_t*) SYS_OLDAREA;
@@ -48,8 +63,8 @@ void syscallHandler() {
     PANIC();
   }
   syscallRequest = callerState-> a1;
-  // callerState-> pc = callerState-> pc + WORD_SIZE; //THIS IS NOT REQUESTED IN UARM
   #endif
+
   void * requested_call = NULL;
   switch(syscallRequest) {
     case GETCPUTIME:
@@ -76,46 +91,46 @@ void syscallHandler() {
     case GETPID:
       requested_call = &get_pid_ppid;
     break;
-    //syscall not recognized
-    default:
-      PANIC();
+    //syscall not recognized, checking form custom
+    default: ;
+      requested_call = &custom_syscall;
+      custom = TRUE;
     break;
   }
   int call_sched = critical_wrapper(requested_call, callerState, start_time, currentProcess);
-  if(call_sched)
-    //nothing to do
+  if(call_sched) {
+    if(custom)
+      recursive_kill(currentProcess);
     scheduler();
-  else
-    LDST(callerState);
+  } else {
+    if(custom)
+      LDST(currentProcess->sysNew);
+    else
+      LDST(callerState);
+  }
 }
 
-/*
-SYSTEM CALL STRUCTURE:
-  input:
-   _ caller state vector
-  output:
-   _ int as bool representing the need to call the scueduler (current process
-     is kill, or blocked by semaphore).
-*/
+/*--------------------------------------------------------------------------------------------------*/
+//syscall code
 
- // bidogna aggiungere il tempo passato a gestire gli interrupt?
-int get_cpu_time(state_t* callerState) {
-  //code for umps
-  unsigned int *time = (unsigned int*) BUS_REG_TOD_LO;
+//SYS1
+int get_cpu_time(state_t* callerState){
+  cpu_time time = *(unsigned int*) BUS_REG_TOD_LO;
   #if TARGET_UMPS
-  callerState->reg_a3 = *time - currentProcess->first_activation;
-  callerState->reg_a2 = currentProcess->kernel_timer;
-  callerState->reg_a1 = currentProcess->user_timer;
+  set_register(callerState->reg_a3, time - currentProcess->first_activation);
+  //current kernel time, counting the time elapsed until the call
+  set_register(callerState->reg_a2, currentProcess->kernel_timer + time - currentProcess->last_stop);
+  set_register(callerState->reg_a1, currentProcess->user_timer);
   #elif TARGET_UARM
-  callerState->a4 = *time - currentProcess->first_activation;
-  callerState->a3 = currentProcess->kernel_timer;
-  callerState->a2 = currentProcess->user_timer;
+  set_register(callerState->a4, time - currentProcess->first_activation);
+  set_register(callerState->a3, currentProcess->kernel_timer + time - currentProcess->last_stop);
+  set_register(callerState->a2, currentProcess->user_timer);
   #endif
   return FALSE;
-}
+};
 
-
-int create_process(state_t* callerState) {
+//SYS2
+int create_process(state_t* callerState){
   pcb_t* newProc = allocPcb();
   if(newProc == NULL){
     set_return(callerState, -1);
@@ -128,15 +143,18 @@ int create_process(state_t* callerState) {
   new_state = (state_t*) callerState->reg_a1;
   priority = callerState->reg_a2;
   //set the cpid to the pcb address
-  if(!callerState->reg_a3)
-    callerState->reg_a3 = (unsigned int) newProc; //non sono sicuro del cast
+  set_register(callerState->reg_a3, (unsigned int) newProc);
   #elif TARGET_UARM
   new_state = (state_t*) callerState->a2;
   priority = callerState->a3;
   //set the cpid to the pcb address
-  if(!callerState->a4)
-    callerState->a4 = (unsigned int) newProc;
+  set_register(callerState->a4, (unsigned int) newProc);
   #endif
+  if(new_state == NULL) {
+    set_return(callerState, -1);
+    return FALSE;
+  }
+
   newProc->priority = priority;
   newProc->original_priority = priority;
   //insert the new process as a child
@@ -149,268 +167,271 @@ int create_process(state_t* callerState) {
   set_return(callerState, 0);
   //return to caller
   return FALSE;
+};
 
-}
-int pid_in_readyQ(pcb_t* pid){
-  pcb_t* ptr;
-  list_for_each_entry(ptr, &readyQueue, p_next){
-    if (ptr == pid)
-      return 1;
-  }
-  return 0;
-}
-
+//SYS3
 int kill(state_t* callerState) {
   pcb_t* kpid = NULL;
-  if(callerState == NULL){ //used in specpassup kill
+  unsigned int killed_current = FALSE;
+  #if TARGET_UMPS
+  kpid = (pcb_t*) callerState->reg_a1;
+  #elif TARGET_UARM
+  kpid = (pcb_t*) callerState->a2;
+  #endif
+  if (kpid == NULL || (unsigned int) kpid == (unsigned int) currentProcess) {
+    // currentProcess is dead, and we killed it.
     kpid = currentProcess;
-    callerState = &currentProcess->p_s;
+    killed_current = TRUE;
   }
-  else{
-    #if TARGET_UMPS
-    kpid = (pcb_t*) callerState->reg_a1;
-    #elif TARGET_UARM
-    kpid = (pcb_t*)  callerState->a2;
-    #endif
-  //TODO: gestire successo o errore
-  }
-  if (kpid == NULL)
-    kpid = currentProcess;
-  if(!pid_in_readyQ(kpid)){
+  // kpid is neither in readyqeue nor blocked on a semaphore; kpid is not a valid pcb
+  else if(!pid_in_readyQ(kpid) && !isBlocked(kpid)){
     set_return(callerState, -1);
     return FALSE;
   }
-
   if(!emptyChild(kpid)){
     //process has child processes, killing the whole tree
     recursive_kill(kpid);
-  }
-  else{
-    //process is single
-    //releasing the semaphore
-    //NON NE SONO SICURO
-    int* sem = kpid->p_semkey;
-    if (sem) {
-      outBlocked(kpid);
-      (*sem)++;
-    }
-    //freeing the control block
+  } else {
+    //single process
+    verhogenKill(kpid);
+    // remove killed process from parent
     outChild(kpid);
+    if(!killed_current) {
+      //remove terminated process from readyQueue
+      outProcQ(&readyQueue, kpid);
+    }
+    // back to free process list
     freePcb(kpid);
     processCount = processCount - 1;
   }
-
   set_return(callerState, 0);
-  //currentProcess is dead, and we killed it. scheduler gains control to advance execution
-  return (kpid == currentProcess);
+  // if the current process was terminated the scheduler gains control
+  // the previous state is loaded otherwise
+  return (killed_current);
 }
 
+// helper for the SYS3
 void recursive_kill(pcb_t* process){
   if(process == NULL)
     return;
-  pcb_t* child;
-  list_for_each_entry(child, &process->p_child, p_sib){
+  while(!emptyChild(process)){
+    pcb_t* child = container_of(process->p_child.next, pcb_t, p_sib);
     recursive_kill(child);
   }
-
-  //releasing the semaphore
-  //NON NE SONO SICURO
-  int* sem = process->p_semkey;
-  if (sem) {
-    outBlocked(process);
-    (*sem)++;
+  verhogenKill(process);
+  outChild(process);
+  if(process != currentProcess){
+    outProcQ(&readyQueue, process);
   }
-
-  if(outProcQ(&readyQueue, process)){
-    processCount = processCount - 1;
-    freePcb(process);
-  }
-  //current process case
-  else {
-    outChild(process);
-    freePcb(process);
-    processCount = processCount - 1;
-  }
+  freePcb(process);
+  processCount = processCount - 1;
 }
 
-int verhogen(state_t* callerState) {
-  int* sem = NULL;
+//SYS4
+int verhogen(state_t* callerState){
+  int* semkey = NULL;
   #if TARGET_UMPS
-  sem = (int*) callerState->reg_a1;
+  semkey = (int*) callerState->reg_a1;
   #elif TARGET_UARM
-  sem = (int*)  callerState->a2;
+  semkey = (int*)  callerState->a2;
   #endif
-  (*sem)++;
-  if((*sem) <= 0) {
-    pcb_t* unblocked = removeBlocked(sem);
+  if(semkey == NULL) {
+    set_return(callerState, -1);
+    return FALSE;
+  }
+  semd_t* sem = getSemd(semkey);
+  if(sem){
+    pcb_t* unblocked = removeBlocked(semkey);
     if(unblocked) {
       schedInsertProc(unblocked);
     }
   }
-  //return to caller
+  else{
+   (*semkey)++;
+  }
+
   return FALSE;
 }
 
-int passeren(state_t* callerState) {
-  int* sem = NULL;
+//SYS5
+int passeren(state_t* callerState){
+  int* semkey = NULL;
   #if TARGET_UMPS
-  sem = (int*) callerState->reg_a1;
+  semkey = (int*) callerState->reg_a1;
   #elif TARGET_UARM
-  sem = (int*)  callerState->a2;
+  semkey = (int*)  callerState->a2;
   #endif
-  (*sem)--;
-  if((*sem) < 0) {
-    //capire cosa fare con mymemcpoy
-    insertBlocked(sem, currentProcess);
+
+  if(semkey == NULL) {
+    set_return(callerState, -1);
+    return FALSE;
+  }
+
+  if(*semkey){
+    (*semkey)--;
+    return FALSE;
+  }
+  else{
+    mymemcpy(&(currentProcess->p_s), callerState, sizeof(state_t));
+    insertBlocked(semkey, currentProcess);
     //need to call the scheduler
     return TRUE;
   }
-  //return to caller
-  return FALSE;
 }
 
-int get_pid_ppid(state_t* callerState) {
-  pcb_t* pid = NULL;
-  #if TARGET_UMPS
-  pid = (pcb_t*) callerState->reg_a1;
-  #elif TARGET_UARM
-  pid = (pcb_t*)  callerState->a2;
-  #endif
-  if(pid != NULL) {
-    pcb_t* ppid = pid->p_parent;
-    #if TARGET_UMPS
-    if(!callerState->reg_a2)
-      callerState->reg_a2 = (unsigned int) ppid;
-    #elif TARGET_UARM
-    if(!callerState->a3)
-      callerState->a3 = (unsigned int) ppid;
-    #endif
-  }
-  return FALSE;
-}
-
-unsigned int get_status(termreg_t* reg, int subdevice){
-  if (subdevice)
-    return reg->recv_status;
-  else
-    return reg->transm_status;
-}
-
-void set_command(termreg_t* reg, unsigned int command, int subdevice){
-  if(subdevice)
-    reg->recv_command = command;
-  else
-    reg->transm_command = command;
-}
-
-int do_IO(state_t* callerState) {
+//SYS6
+int do_IO(state_t* callerState){
   unsigned int command;
-  termreg_t *reg;
+  devreg_t *reg;
   int subdevice;
+
   #if TARGET_UMPS
   command = (unsigned int)callerState->reg_a1;
-  reg = (termreg_t*)callerState->reg_a2;
+  reg = (devreg_t*)callerState->reg_a2;
   subdevice = (int)callerState->reg_a3;
   #elif TARGET_UARM
   command = (unsigned int)callerState->a2;
-  reg = (termreg_t*)callerState->a3;
+  reg = (devreg_t*)callerState->a3;
   subdevice = (int)callerState->a4;
   #endif
 
+  if(reg == NULL) {
+    set_return(callerState, -1);
+    return FALSE;
+  }
+
+  if((unsigned int) reg < DEV_REG_ADDR(TERMINAL_LINE, 0)) {
+    //generic device
+    subdevice = -1;
+  }
+
   unsigned int stat = get_status(reg, subdevice);
+  if (stat != ST_READY && stat != ST_TRANSMITTED)
+    //stop the do_IO if the device is busy and return to caller
+    return FALSE;
 
-  if (stat != 1 && stat != 5)
-    term_puts("device not ready");
-
-  // if(subdevice == 0)
-  //   reg = reg + 0x8;
   set_command(reg, command, subdevice);
-
-  while(((stat = get_status(reg, subdevice)) & 0xFF) == 3)
-    ;
-
-  set_command(reg, 1, subdevice);
-
-  if((stat & 0xFF) != 5){
-  #if TARGET_UMPS
-     callerState->reg_v0 = -1;
-  #elif TARGET_UARM
-    callerState->a1 = -1;
-  #endif
+  int line, dev;
+  get_line_dev(reg, &line, &dev);
+  semd_t* sem = getSemDev(line, dev, subdevice);
+  int * s_key = sem->s_key;
+  (*s_key)--;
+  if((*s_key) < 0){
+    mymemcpy(&(currentProcess->p_s), callerState, sizeof(*callerState));
+    insertSem(sem);
+    insertBlocked(sem->s_key, currentProcess);
+    blockedCount++;
+    return TRUE;
   }
-  else{
-    // term_puts("status corretto\n");
-    set_return(callerState, stat);
-  }
-  return FALSE;
-}
+  PANIC(); //S_KEY SHOULD NEVER BE >= 0
+};
 
-void passup_kill(state_t* callerState){
-  set_return(callerState, -1);
-  //todo update kernel time
-  kill(NULL);
-}
-
+//SYS7
 int spec_passup(state_t* callerState){
   int type;
+  state_t* newState;
+  state_t* oldState;
+
   #if TARGET_UMPS
+  newState = (state_t*)callerState->reg_a3;
+  oldState = (state_t*)callerState->reg_a2;
   type = callerState->reg_a1;
   #elif TARGET_UARM
+  newState = (state_t*)callerState->a4;
+  oldState = (state_t*)callerState->a3;
   type = callerState->a2;
   #endif
+  if(oldState == NULL || newState == NULL) {
+    set_return(callerState, -1);
+    return FALSE;
+  }
   switch (type)
   {
     case 0: //sys/break
       if(currentProcess->sysNew != NULL){
-        //todo time
-        passup_kill(callerState);
+        // passup kill
+        recursive_kill(currentProcess);
+        set_return(callerState, -1);
+        //back to scheduler
+        return TRUE;
       }
-      #if TARGET_UMPS
-      currentProcess->sysNew = (state_t*)callerState->reg_a3;
-      currentProcess->sysOld = (state_t*)callerState->reg_a2;
-      #elif TARGET_UARM
-      currentProcess->sysNew = (state_t*)callerState->a4;
-      currentProcess->sysOld = (state_t*)callerState->a3;
-      #endif
+      currentProcess->sysNew = newState;
+      currentProcess->sysOld = oldState;
 
       break;
     case 1:
       if(currentProcess->TlbNew != NULL){
-        passup_kill(callerState);
+        // passup kill
+        recursive_kill(currentProcess);
+        set_return(callerState, -1);
+        //back to scheduler
+        return TRUE;
       }
-      #if TARGET_UMPS
-      currentProcess->TlbNew =(state_t*)callerState->reg_a3;
-      currentProcess->TlbOld = (state_t*)callerState->reg_a2;
-      #elif TARGET_UARM
-      currentProcess->TlbNew = (state_t*)callerState->a4;
-      currentProcess->TlbOld = (state_t*)callerState->a3;
-      #endif
+      currentProcess->TlbNew = newState;
+      currentProcess->TlbOld = oldState;
       break;
     case 2:
       if(currentProcess->pgtNew != NULL){
-        passup_kill(callerState);
+        // passup kill
+        recursive_kill(currentProcess);
+        set_return(callerState, -1);
+        //back to scheduler
+        return TRUE;
       }
-      #if TARGET_UMPS
-      currentProcess->pgtNew = (state_t*)callerState->reg_a3;
-      currentProcess->pgtOld = (state_t*)callerState->reg_a2;
-      #elif TARGET_UARM
-      currentProcess->pgtNew = (state_t*)callerState->a4;
-      currentProcess->pgtOld = (state_t*)callerState->a3;
-      #endif
+      currentProcess->pgtNew = newState;
+      currentProcess->pgtOld = oldState;
     break;
   }
   set_return(callerState, 0);
 
   return FALSE;
+};
+
+//SYS8
+int get_pid_ppid(state_t* callerState){
+  unsigned int pid = 0;
+  unsigned int ppid = 0;
+  pid = (unsigned int) currentProcess;
+  ppid = (unsigned int) currentProcess->p_parent;
+  // set_register only sets the register if not NULL
+  #if TARGET_UMPS
+  set_register(callerState->reg_a1, pid);
+  set_register(callerState->reg_a2, ppid);
+  #elif TARGET_UARM
+  set_register(callerState->a2, pid);
+  set_register(callerState->a3, ppid);
+  #endif
+  return FALSE;
+};
+
+//custom SYSCALLS
+int custom_syscall(state_t* callerState) {
+  if(currentProcess->sysNew != NULL){
+    mymemcpy(currentProcess->sysOld, callerState, sizeof(state_t));
+    return FALSE;
+  }
+  return TRUE;
+}
+
+/*--------------------------------------------------------------------------------------------------*/
+//TLB exception handlers
+int TLBHelper(state_t* callerState) {
+  if(currentProcess->TlbNew != NULL){
+    mymemcpy(currentProcess->TlbOld, callerState, sizeof(state_t));
+    return FALSE;
+  }
+  return TRUE;
 }
 
 void TLBManager() {
+  cpu_time start_time = update_user_time(currentProcess);
   state_t* callerState = NULL;
   callerState = (state_t*) TLB_OLDAREA;
-  if(currentProcess->TlbNew != NULL){
-    mymemcpy(currentProcess->TlbOld, callerState, sizeof(state_t));
-    LDST(currentProcess->TlbNew);
+  int call_sched = critical_wrapper(&TLBHelper, callerState, start_time, currentProcess);
+  if(call_sched) {
+    recursive_kill(currentProcess);
+    scheduler();
   }
-  //no hanlder defined
-  kill(NULL); //todo time
+  else
+    LDST(currentProcess->TlbNew);
 }

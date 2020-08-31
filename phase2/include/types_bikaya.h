@@ -1,12 +1,24 @@
 #ifndef TYPES_BIKAYA_H_INCLUDED
 #define TYPES_BIKAYA_H_INCLUDED
 
-#include "system.h"
+#ifdef TARGET_UMPS
+#include "umps/libumps.h"
+#include "umps/arch.h"
+#include "umps/types.h"
+#endif
+#ifdef TARGET_UARM
+#include "uarm/libuarm.h"
+#include "uarm/arch.h"
+#include "uarm/uARMtypes.h"
+#include "uarm/uARMconst.h"
+#endif
 
+#include "const_bikaya.h"
 #include "listx.h"
 
 typedef unsigned int memaddr;
 typedef unsigned int cpu_time;
+
 /* Process Control Block (PCB) data structure */
 typedef struct pcb_t {
     /*process queue fields */
@@ -30,6 +42,7 @@ typedef struct pcb_t {
     cpu_time kernel_timer;      //time elapsed in kernel mode
     cpu_time first_activation;  //TOD of first process load
     cpu_time last_restart;      //TOD of last load
+    cpu_time last_stop;         //TOD of last kernel mode start
 
     state_t* sysNew;
     state_t* sysOld;
@@ -37,8 +50,6 @@ typedef struct pcb_t {
     state_t* TlbOld;
     state_t* pgtNew;
     state_t* pgtOld;
-
-
 } pcb_t;
 
 
