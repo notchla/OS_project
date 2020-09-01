@@ -30,7 +30,6 @@
 
 #endif
 #ifdef TARGET_UARM
-#include "uarm/uARMconst.h"
 /* returns the complete cause vector */
 #define CAUSE_ALL_GET(cause) ((cause & 0xFF000000) >> 24)
 #endif

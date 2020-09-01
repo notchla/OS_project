@@ -331,7 +331,7 @@ int do_IO(state_t* callerState){
     return TRUE;
   }
   PANIC(); //S_KEY SHOULD NEVER BE >= 0
-  return;
+  return FALSE;
 };
 
 //SYS7
