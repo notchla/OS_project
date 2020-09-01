@@ -64,7 +64,7 @@ void syscallHandler() {
   }
   syscallRequest = callerState-> a1;
   #endif
-
+  //pointer to the requested syscall function, to be evoked in the critical_wrapper
   void * requested_call = NULL;
   switch(syscallRequest) {
     case GETCPUTIME:
@@ -100,10 +100,12 @@ void syscallHandler() {
   int call_sched = critical_wrapper(requested_call, callerState, start_time, currentProcess);
   if(call_sched) {
     if(custom)
+      //custom syscall not initialized. kill the currentProcess, then call sched
       recursive_kill(currentProcess);
     scheduler();
   } else {
     if(custom)
+      //load custom syscall
       LDST(currentProcess->sysNew);
     else
       LDST(callerState);
@@ -111,19 +113,20 @@ void syscallHandler() {
 }
 
 /*--------------------------------------------------------------------------------------------------*/
-//syscall code
+//syscall function code
 
 //SYS1
 int get_cpu_time(state_t* callerState){
   cpu_time time = *(unsigned int*) BUS_REG_TOD_LO;
+  //precise current kernel time, counting the time elapsed until the call
+  cpu_time currentKernelTime = currentProcess->kernel_timer + time - currentProcess->last_stop;
   #if TARGET_UMPS
   set_register(callerState->reg_a3, time - currentProcess->first_activation);
-  //current kernel time, counting the time elapsed until the call
-  set_register(callerState->reg_a2, currentProcess->kernel_timer + time - currentProcess->last_stop);
+  set_register(callerState->reg_a2, currentKernelTime);
   set_register(callerState->reg_a1, currentProcess->user_timer);
   #elif TARGET_UARM
   set_register(callerState->a4, time - currentProcess->first_activation);
-  set_register(callerState->a3, currentProcess->kernel_timer + time - currentProcess->last_stop);
+  set_register(callerState->a3, currentKernelTime);
   set_register(callerState->a2, currentProcess->user_timer);
   #endif
   return FALSE;
@@ -150,6 +153,7 @@ int create_process(state_t* callerState){
   //set the cpid to the pcb address
   set_register(callerState->a4, (unsigned int) newProc);
   #endif
+  //check if the passed address is not null
   if(new_state == NULL) {
     set_return(callerState, -1);
     return FALSE;
@@ -235,6 +239,7 @@ int verhogen(state_t* callerState){
   #elif TARGET_UARM
   semkey = (int*)  callerState->a2;
   #endif
+  //check if the passed address is not null
   if(semkey == NULL) {
     set_return(callerState, -1);
     return FALSE;
@@ -261,7 +266,7 @@ int passeren(state_t* callerState){
   #elif TARGET_UARM
   semkey = (int*)  callerState->a2;
   #endif
-
+  //check if the passed address is not null
   if(semkey == NULL) {
     set_return(callerState, -1);
     return FALSE;
@@ -294,7 +299,7 @@ int do_IO(state_t* callerState){
   reg = (devreg_t*)callerState->a3;
   subdevice = (int)callerState->a4;
   #endif
-
+  //check if the passed address is not null
   if(reg == NULL) {
     set_return(callerState, -1);
     return FALSE;
@@ -313,6 +318,8 @@ int do_IO(state_t* callerState){
   set_command(reg, command, subdevice);
   int line, dev;
   get_line_dev(reg, &line, &dev);
+
+  //P the sem of the requested device
   semd_t* sem = getSemDev(line, dev, subdevice);
   int * s_key = sem->s_key;
   (*s_key)--;
@@ -324,6 +331,7 @@ int do_IO(state_t* callerState){
     return TRUE;
   }
   PANIC(); //S_KEY SHOULD NEVER BE >= 0
+  return;
 };
 
 //SYS7
@@ -341,6 +349,7 @@ int spec_passup(state_t* callerState){
   oldState = (state_t*)callerState->a3;
   type = callerState->a2;
   #endif
+  //check if the passed addresses are not null
   if(oldState == NULL || newState == NULL) {
     set_return(callerState, -1);
     return FALSE;

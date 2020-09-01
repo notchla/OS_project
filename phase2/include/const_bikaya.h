@@ -22,11 +22,15 @@
 #define EXC_PTEMISS        14
 
 #define FRAMESIZE 4096
-#endif
 
+//filter interrupt cause bits
+#define CAUSE_MASK                0x000000FF
+/* returns the cause vector */
+#define CAUSE_ALL_GET(cause) ((cause >> 8) & CAUSE_MASK)
+
+#endif
 #ifdef TARGET_UARM
 #include "uarm/uARMconst.h"
-//archidecture specific custom macros
 /* returns the complete cause vector */
 #define CAUSE_ALL_GET(cause) ((cause & 0xFF000000) >> 24)
 #endif
@@ -71,8 +75,6 @@
 #define DEV_USED_INTS   5 /* Number of ints reserved for devices: 3,4,5,6,7 */
 #define DEV_PER_INT     8 /* Maximum number of devices per interrupt line */
 
-//filter interrupt cause bits
-#define CAUSE_MASK                0x000000FF
 
 
 #define TERM_STATUS_MASK   0xFF

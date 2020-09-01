@@ -58,7 +58,7 @@ void ACKDevice(unsigned int* commandRegister);
 int pid_in_readyQ(pcb_t* pid);
 //set the cpu register reg if != null
 int set_register(unsigned int reg, unsigned int val);
-//custom implementation of the base 2 logarithm
+//custom recursive implementation of the base 2 logarithm
 int log2(unsigned int n);
 //keeps set only the lowest set bit
 int lowest_set(int number);

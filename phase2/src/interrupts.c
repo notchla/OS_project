@@ -13,13 +13,13 @@ void interruptHandler() {
   #if TARGET_UMPS
   oldstatus = (state_t*) IE_OLDAREA;
   cause = oldstatus-> cause;
-  cause = (cause >> 8) & CAUSE_MASK;
   #elif TARGET_UARM
   oldstatus = (state_t*) INT_OLDAREA;
   cause = oldstatus-> CP15_Cause;
-  cause = CAUSE_ALL_GET(cause);
   oldstatus->pc -= WORD_SIZE;
   #endif
+  //mask and shift unwanted bits
+  cause = CAUSE_ALL_GET(cause);
   //order of ifs is important to preserve interrupt priority
   if(cause & PROC_INT) {
     //not handled!
@@ -44,6 +44,7 @@ void interruptHandler() {
     PANIC();
   }
   critical_wrapper(requested_handler, oldstatus, start_time, currentProcess);
+  //return value is unimportant, always return to caller
   scheduler();
 }
 

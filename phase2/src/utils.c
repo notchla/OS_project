@@ -50,8 +50,11 @@ void set_command(devreg_t* reg, unsigned int command, int subdevice){
 }
 
 void get_line_dev(devreg_t* reg, int* line, int* dev) {
+  //first interrupt register
   unsigned int base_dev = DEV_REG_ADDR(LOWEST_LINE, 0);
+  //offset between our address and the first register
   unsigned int offset = ((unsigned int) reg) - base_dev;
+  //offset in number of lines
   unsigned int line_offset = (unsigned int) offset / DEV_REG_SIZE;
   *line = (int) line_offset / DEV_PER_INT + LOWEST_LINE;
   *dev = line_offset % DEV_PER_INT;
@@ -101,9 +104,11 @@ void verhogenKill(pcb_t* process) {
     //process was blocked on a semaphore
     //the s_key are in progressive, sequential memory areas by declaration
     if(sem >= getSemDev(LOWEST_LINE, 0, 0)->s_key && sem <= getSemDev(TERMINAL_LINE, DEV_PER_INT, 0)->s_key) {
+      //device semaphore
       DevicesOutBlocked(process);
       blockedCount--;
     } else {
+      //user semaphore
       outBlocked(process);
     }
   }
@@ -164,7 +169,7 @@ int lowest_set(int number){
 }
 
 int log2(unsigned int n){
-  // very inefficient
+  // recursive implementation
   if(n > 1) {
     return(1 + log2(n/2));
   } else {
