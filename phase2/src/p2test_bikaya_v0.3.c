@@ -20,12 +20,11 @@
  *      Modified by Mattia Maldini, Renzo Davoli 2020
  */
 
-#include "utils.h"
-
 #ifdef TARGET_UMPS
 #include "umps/libumps.h"
 #include "umps/arch.h"
 #include "umps/types.h"
+#include "p2test_bikaya_v0.3.h"
 #define FRAME_SIZE 4096
 /* Elapsed clock ticks (CPU instructions executed) since system power on.
    Only the "low" part is actually used. */
@@ -173,13 +172,11 @@ void print(char *msg) {
 
         /*		PANIC(); */
 
-        if ((status & TERMSTATMASK) != TRANSM){
+        if ((status & TERMSTATMASK) != TRANSM)
             PANIC();
-        }
 
-        if (((status & TERMCHARMASK) >> BYTELEN) != *s){
+        if (((status & TERMCHARMASK) >> BYTELEN) != *s)
             PANIC();
-        }
 
         s++;
     }
@@ -261,6 +258,7 @@ void test() {
     SYSCALL(CREATEPROCESS, (int)&p6state, DEFAULT_PRIORITY, 0); /* start p6		*/
 
     SYSCALL(VERHOGEN, (int)&blkp7, 0, 0);
+
     /* now for a more rigorous check of process termination */
     for (p7inc = 0; p7inc < 4; p7inc++) {
         SYSCALL(PASSEREN, (int)&blkp7, 0, 0);
@@ -268,6 +266,7 @@ void test() {
         blkleaves  = 0;
 
         creation = SYSCALL(CREATEPROCESS, (int)&p7rootstate, DEFAULT_PRIORITY, (int)&p7pid);
+
         if (creation == ERROR) {
             print("error in process creation\n");
             PANIC();
@@ -282,6 +281,7 @@ void test() {
     }
 
     print("\n");
+
     print("p1 finishes OK -- TTFN\n");
     *((memaddr *)BADADDR) = 0; /* terminate p1 */
 
@@ -571,6 +571,7 @@ void p7root() {
     int i;
 
     print("p7root starts\n");
+
     SYSCALL(CREATEPROCESS, (int)&child1state, DEFAULT_PRIORITY, 0);
     SYSCALL(CREATEPROCESS, (int)&child2state, DEFAULT_PRIORITY, 0);
 
@@ -578,13 +579,17 @@ void p7root() {
         SYSCALL(PASSEREN, (int)&endcreate, 0, 0);
 
     print("Leaves created, now terminating...\n");
+
     SYSCALL(TERMINATEPROCESS, (int)leaf1pid, 0, 0);
     SYSCALL(TERMINATEPROCESS, (int)leaf2pid, 0, 0);
     SYSCALL(TERMINATEPROCESS, (int)leaf3pid, 0, 0);
     SYSCALL(TERMINATEPROCESS, (int)leaf4pid, 0, 0);
+
     for (i = 0; i < NOLEAVES; i++)
         SYSCALL(VERHOGEN, (int)&blkleaves, 0, 0);
+
     SYSCALL(VERHOGEN, (int)&endp7, 0, 0);
+
     SYSCALL(PASSEREN, (int)&blkp7, 0, 0);
 
     print("Error: p7root should not reach here!\n");
