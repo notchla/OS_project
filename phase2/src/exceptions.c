@@ -18,7 +18,7 @@ int trapHelper(state_t* callerState) {
 }
 
 void trapHandler() {
-  cpu_time start_time = update_user_time(currentProcess);
+  cpu_time start_time = updateUserTime(currentProcess);
   state_t* callerState = NULL;
   #if TARGET_UMPS
   callerState = (state_t*) TRAP_OLDAREA;
@@ -26,10 +26,10 @@ void trapHandler() {
   callerState = (state_t*) PGMTRAP_OLDAREA;
   #endif
 
-  int call_sched = critical_wrapper(&trapHelper, callerState, start_time, currentProcess);
+  int call_sched = criticalWrapper(&trapHelper, callerState, start_time, currentProcess);
 
   if(call_sched) {//handler is not defined, process is killed
-    recursive_kill(currentProcess);
+    recursiveKill(currentProcess);
     scheduler();
   }
   else
@@ -39,7 +39,7 @@ void trapHandler() {
 /*--------------------------------------------------------------------------------------------------*/
 //syscall exceptions handler
 void syscallHandler() {
-  cpu_time start_time = update_user_time(currentProcess);
+  cpu_time start_time = updateUserTime(currentProcess);
 
   int syscallRequest = 0;
   //custom syscall flag
@@ -64,14 +64,14 @@ void syscallHandler() {
   }
   syscallRequest = callerState-> a1;
   #endif
-  //pointer to the requested syscall function, to be evoked in the critical_wrapper
+  //pointer to the requested syscall function, to be evoked in the criticalWrapper
   void * requested_call = NULL;
   switch(syscallRequest) {
     case GETCPUTIME:
-      requested_call = &get_cpu_time;
+      requested_call = &getCPUTime;
     break;
     case CREATEPROCESS:
-      requested_call = &create_process;
+      requested_call = &createProcess;
     break;
     case TERMINATEPROCESS:
       requested_call = &kill;
@@ -83,25 +83,25 @@ void syscallHandler() {
       requested_call = &passeren;
     break;
     case WAITIO:
-      requested_call = &do_IO;
+      requested_call = &doIO;
     break;
     case SPECPASSUP:
-      requested_call = &spec_passup;
+      requested_call = &specPassup;
     break;
     case GETPID:
-      requested_call = &get_pid_ppid;
+      requested_call = &getPIDPPID;
     break;
     //syscall not recognized, checking form custom
     default: ;
-      requested_call = &custom_syscall;
+      requested_call = &customSyscall;
       custom = TRUE;
     break;
   }
-  int call_sched = critical_wrapper(requested_call, callerState, start_time, currentProcess);
+  int call_sched = criticalWrapper(requested_call, callerState, start_time, currentProcess);
   if(call_sched) {
     if(custom)
       //custom syscall not initialized. kill the currentProcess, then call sched
-      recursive_kill(currentProcess);
+      recursiveKill(currentProcess);
     scheduler();
   } else {
     if(custom)
@@ -116,27 +116,27 @@ void syscallHandler() {
 //syscall function code
 
 //SYS1
-int get_cpu_time(state_t* callerState){
+int getCPUTime(state_t* callerState){
   cpu_time time = *(unsigned int*) BUS_REG_TOD_LO;
   //precise current kernel time, counting the time elapsed until the call
   cpu_time currentKernelTime = currentProcess->kernel_timer + time - currentProcess->last_stop;
   #if TARGET_UMPS
-  set_register(callerState->reg_a3, time - currentProcess->first_activation);
-  set_register(callerState->reg_a2, currentKernelTime);
-  set_register(callerState->reg_a1, currentProcess->user_timer);
+  setRegister(callerState->reg_a3, time - currentProcess->first_activation);
+  setRegister(callerState->reg_a2, currentKernelTime);
+  setRegister(callerState->reg_a1, currentProcess->user_timer);
   #elif TARGET_UARM
-  set_register(callerState->a4, time - currentProcess->first_activation);
-  set_register(callerState->a3, currentKernelTime);
-  set_register(callerState->a2, currentProcess->user_timer);
+  setRegister(callerState->a4, time - currentProcess->first_activation);
+  setRegister(callerState->a3, currentKernelTime);
+  setRegister(callerState->a2, currentProcess->user_timer);
   #endif
   return FALSE;
 };
 
 //SYS2
-int create_process(state_t* callerState){
+int createProcess(state_t* callerState){
   pcb_t* newProc = allocPcb();
   if(newProc == NULL){
-    set_return(callerState, -1);
+    setReturn(callerState, -1);
     //return to caller
     return FALSE;
   }
@@ -146,16 +146,16 @@ int create_process(state_t* callerState){
   new_state = (state_t*) callerState->reg_a1;
   priority = callerState->reg_a2;
   //set the cpid to the pcb address
-  set_register(callerState->reg_a3, (unsigned int) newProc);
+  setRegister(callerState->reg_a3, (unsigned int) newProc);
   #elif TARGET_UARM
   new_state = (state_t*) callerState->a2;
   priority = callerState->a3;
   //set the cpid to the pcb address
-  set_register(callerState->a4, (unsigned int) newProc);
+  setRegister(callerState->a4, (unsigned int) newProc);
   #endif
   //check if the passed address is not null
   if(new_state == NULL) {
-    set_return(callerState, -1);
+    setReturn(callerState, -1);
     return FALSE;
   }
 
@@ -168,7 +168,7 @@ int create_process(state_t* callerState){
   //load the passed state into the new process
   mymemcpy(&(newProc->p_s), new_state, sizeof(*new_state));
   processCount = processCount + 1;
-  set_return(callerState, 0);
+  setReturn(callerState, 0);
   //return to caller
   return FALSE;
 };
@@ -188,13 +188,13 @@ int kill(state_t* callerState) {
     killed_current = TRUE;
   }
   // kpid is neither in readyqeue nor blocked on a semaphore; kpid is not a valid pcb
-  else if(!pid_in_readyQ(kpid) && !isBlocked(kpid)){
-    set_return(callerState, -1);
+  else if(!PIDinReadyQ(kpid) && !isBlocked(kpid)){
+    setReturn(callerState, -1);
     return FALSE;
   }
   if(!emptyChild(kpid)){
     //process has child processes, killing the whole tree
-    recursive_kill(kpid);
+    recursiveKill(kpid);
   } else {
     //single process
     verhogenKill(kpid);
@@ -208,19 +208,19 @@ int kill(state_t* callerState) {
     freePcb(kpid);
     processCount = processCount - 1;
   }
-  set_return(callerState, 0);
+  setReturn(callerState, 0);
   // if the current process was terminated the scheduler gains control
   // the previous state is loaded otherwise
   return (killed_current);
 }
 
 // helper for the SYS3
-void recursive_kill(pcb_t* process){
+void recursiveKill(pcb_t* process){
   if(process == NULL)
     return;
   while(!emptyChild(process)){
     pcb_t* child = container_of(process->p_child.next, pcb_t, p_sib);
-    recursive_kill(child);
+    recursiveKill(child);
   }
   verhogenKill(process);
   outChild(process);
@@ -241,7 +241,7 @@ int verhogen(state_t* callerState){
   #endif
   //check if the passed address is not null
   if(semkey == NULL) {
-    set_return(callerState, -1);
+    setReturn(callerState, -1);
     return FALSE;
   }
   semd_t* sem = getSemd(semkey);
@@ -268,7 +268,7 @@ int passeren(state_t* callerState){
   #endif
   //check if the passed address is not null
   if(semkey == NULL) {
-    set_return(callerState, -1);
+    setReturn(callerState, -1);
     return FALSE;
   }
 
@@ -285,7 +285,7 @@ int passeren(state_t* callerState){
 }
 
 //SYS6
-int do_IO(state_t* callerState){
+int doIO(state_t* callerState){
   unsigned int command;
   devreg_t *reg;
   int subdevice;
@@ -301,7 +301,7 @@ int do_IO(state_t* callerState){
   #endif
   //check if the passed address is not null
   if(reg == NULL) {
-    set_return(callerState, -1);
+    setReturn(callerState, -1);
     return FALSE;
   }
 
@@ -310,14 +310,14 @@ int do_IO(state_t* callerState){
     subdevice = -1;
   }
 
-  unsigned int stat = get_status(reg, subdevice);
+  unsigned int stat = getStatus(reg, subdevice);
   if (stat != ST_READY && stat != ST_TRANSMITTED)
-    //stop the do_IO if the device is busy and return to caller
+    //stop the doIO if the device is busy and return to caller
     return FALSE;
 
-  set_command(reg, command, subdevice);
+  setCommand(reg, command, subdevice);
   int line, dev;
-  get_line_dev(reg, &line, &dev);
+  getLineDev(reg, &line, &dev);
 
   //P the sem of the requested device
   semd_t* sem = getSemDev(line, dev, subdevice);
@@ -335,7 +335,7 @@ int do_IO(state_t* callerState){
 };
 
 //SYS7
-int spec_passup(state_t* callerState){
+int specPassup(state_t* callerState){
   int type;
   state_t* newState;
   state_t* oldState;
@@ -351,7 +351,7 @@ int spec_passup(state_t* callerState){
   #endif
   //check if the passed addresses are not null
   if(oldState == NULL || newState == NULL) {
-    set_return(callerState, -1);
+    setReturn(callerState, -1);
     return FALSE;
   }
   switch (type)
@@ -359,8 +359,8 @@ int spec_passup(state_t* callerState){
     case 0: //sys/break
       if(currentProcess->sysNew != NULL){
         // passup kill
-        recursive_kill(currentProcess);
-        set_return(callerState, -1);
+        recursiveKill(currentProcess);
+        setReturn(callerState, -1);
         //back to scheduler
         return TRUE;
       }
@@ -371,8 +371,8 @@ int spec_passup(state_t* callerState){
     case 1:
       if(currentProcess->TlbNew != NULL){
         // passup kill
-        recursive_kill(currentProcess);
-        set_return(callerState, -1);
+        recursiveKill(currentProcess);
+        setReturn(callerState, -1);
         //back to scheduler
         return TRUE;
       }
@@ -382,8 +382,8 @@ int spec_passup(state_t* callerState){
     case 2:
       if(currentProcess->pgtNew != NULL){
         // passup kill
-        recursive_kill(currentProcess);
-        set_return(callerState, -1);
+        recursiveKill(currentProcess);
+        setReturn(callerState, -1);
         //back to scheduler
         return TRUE;
       }
@@ -391,30 +391,30 @@ int spec_passup(state_t* callerState){
       currentProcess->pgtOld = oldState;
     break;
   }
-  set_return(callerState, 0);
+  setReturn(callerState, 0);
 
   return FALSE;
 };
 
 //SYS8
-int get_pid_ppid(state_t* callerState){
+int getPIDPPID(state_t* callerState){
   unsigned int pid = 0;
   unsigned int ppid = 0;
   pid = (unsigned int) currentProcess;
   ppid = (unsigned int) currentProcess->p_parent;
-  // set_register only sets the register if not NULL
+  // setRegister only sets the register if not NULL
   #if TARGET_UMPS
-  set_register(callerState->reg_a1, pid);
-  set_register(callerState->reg_a2, ppid);
+  setRegister(callerState->reg_a1, pid);
+  setRegister(callerState->reg_a2, ppid);
   #elif TARGET_UARM
-  set_register(callerState->a2, pid);
-  set_register(callerState->a3, ppid);
+  setRegister(callerState->a2, pid);
+  setRegister(callerState->a3, ppid);
   #endif
   return FALSE;
 };
 
 //custom SYSCALLS
-int custom_syscall(state_t* callerState) {
+int customSyscall(state_t* callerState) {
   if(currentProcess->sysNew != NULL){
     mymemcpy(currentProcess->sysOld, callerState, sizeof(state_t));
     return FALSE;
@@ -433,12 +433,12 @@ int TLBHelper(state_t* callerState) {
 }
 
 void TLBManager() {
-  cpu_time start_time = update_user_time(currentProcess);
+  cpu_time start_time = updateUserTime(currentProcess);
   state_t* callerState = NULL;
   callerState = (state_t*) TLB_OLDAREA;
-  int call_sched = critical_wrapper(&TLBHelper, callerState, start_time, currentProcess);
+  int call_sched = criticalWrapper(&TLBHelper, callerState, start_time, currentProcess);
   if(call_sched) {
-    recursive_kill(currentProcess);
+    recursiveKill(currentProcess);
     scheduler();
   }
   else

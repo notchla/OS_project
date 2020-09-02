@@ -9,7 +9,7 @@ void mymemcpy(void *dest, void *src, int n){
   }
 }
 
-int critical_wrapper(int (*call)(), state_t* callerState, cpu_time start_time, pcb_t* currentProcess) {
+int criticalWrapper(int (*call)(), state_t* callerState, cpu_time start_time, pcb_t* currentProcess) {
   int call_sched = 0;
   if (call) {
     //call the requested syscall function
@@ -25,14 +25,14 @@ int critical_wrapper(int (*call)(), state_t* callerState, cpu_time start_time, p
   return call_sched;
 }
 
-cpu_time update_user_time(pcb_t* currentProcess) {
+cpu_time updateUserTime(pcb_t* currentProcess) {
   cpu_time start_time = *((unsigned int *)BUS_REG_TOD_LO);;
   currentProcess->user_timer = currentProcess->user_timer + (start_time - currentProcess->last_restart);
   currentProcess->last_stop = start_time;
   return(start_time);
 }
 
-void set_return(state_t* caller, int status) {
+void setReturn(state_t* caller, int status) {
   #if TARGET_UMPS
   caller->reg_v0 = status;
   #elif TARGET_UARM
@@ -40,7 +40,7 @@ void set_return(state_t* caller, int status) {
   #endif
 }
 
-void set_command(devreg_t* reg, unsigned int command, int subdevice){
+void setCommand(devreg_t* reg, unsigned int command, int subdevice){
   if(subdevice == -1)
     reg->dtp.command = command;
   else if(subdevice == 1)
@@ -49,7 +49,7 @@ void set_command(devreg_t* reg, unsigned int command, int subdevice){
     reg->term.transm_command = command;
 }
 
-void get_line_dev(devreg_t* reg, int* line, int* dev) {
+void getLineDev(devreg_t* reg, int* line, int* dev) {
   //first interrupt register
   unsigned int base_dev = DEV_REG_ADDR(LOWEST_LINE, 0);
   //offset between our address and the first register
@@ -61,7 +61,7 @@ void get_line_dev(devreg_t* reg, int* line, int* dev) {
 }
 
 
-unsigned int get_status(devreg_t* reg, int subdevice){
+unsigned int getStatus(devreg_t* reg, int subdevice){
   if (subdevice == -1)
     //-1 for generic device
     return reg->dtp.status;
@@ -125,14 +125,14 @@ void verhogenDevice(int line, unsigned int status, int deviceNumber, int read) {
     ++(*s_key);
     if(*s_key <= 0){
       pcb_t* waiting_proc = removeBlockedonDevice(s_key);
-      set_return(&waiting_proc->p_s, status);
+      setReturn(&waiting_proc->p_s, status);
       blockedCount--;
       schedInsertProc(waiting_proc);
     }
   }
 }
 
-int pid_in_readyQ(pcb_t* pid) {
+int PIDinReadyQ(pcb_t* pid) {
   pcb_t* ptr;
   list_for_each_entry(ptr, &readyQueue, p_next){
     if (ptr == pid)
@@ -141,7 +141,7 @@ int pid_in_readyQ(pcb_t* pid) {
   return 0;
 }
 
-int set_register(unsigned int reg, unsigned int val) {
+int setRegister(unsigned int reg, unsigned int val) {
   if(reg) {
     *(unsigned int*) reg = val;
     return FALSE;
@@ -155,7 +155,7 @@ int getDeviceNumber(int line){
   unsigned int* bitmap = (unsigned int *) CDEV_BITMAP_ADDR(line);
   unsigned int cause = *bitmap;
   //find interrupt line (exponent) of the lowest set bit. preserves priority order
-  unsigned int devNum = log2(lowest_set(cause));
+  unsigned int devNum = log2(lowestSetBit(cause));
 
   if((devNum < 0) || (devNum > TERMINAL_LINE)) {
     return -1;
@@ -164,7 +164,7 @@ int getDeviceNumber(int line){
   }
 }
 
-int lowest_set(int number){
+int lowestSetBit(int number){
   return (number & -number);
 }
 
@@ -177,11 +177,11 @@ int log2(unsigned int n){
   }
 }
 
-unsigned int tx_status(termreg_t *tp) {
+unsigned int txStatus(termreg_t *tp) {
     return ((tp->transm_status));
 }
 
-unsigned int rx_status(termreg_t *tp) {
+unsigned int rxStatus(termreg_t *tp) {
   return ((tp->recv_status));
 }
 

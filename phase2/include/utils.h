@@ -20,29 +20,29 @@ void mymemcpy(void *dest, void *src, int n);
 *  outputs:
 *   _ call_sched: forwards the bool returned by the calls.
 */
-int critical_wrapper(int (*call)(), state_t* callerState, cpu_time start_time, pcb_t* currentProcess);
+int criticalWrapper(int (*call)(), state_t* callerState, cpu_time start_time, pcb_t* currentProcess);
 
-/* helper to the critical_wrapper; updates the user time of the process
+/* helper to the criticalWrapper; updates the user time of the process
   inputs:
   _ currentProcess: pcb of the calling process
   outputs:
-  _ start_time: the TOD when the function was called, to be passed to the critical_wrapper
+  _ start_time: the TOD when the function was called, to be passed to the criticalWrapper
 */
-cpu_time update_user_time(pcb_t* currentProcess);
+cpu_time updateUserTime(pcb_t* currentProcess);
 
 //set the return register of caller to status
-void set_return(state_t* caller, int status);
+void setReturn(state_t* caller, int status);
 
 /* set the command registerin the passed device register to command.
  * subdevices indicates wether the terminal is recieving or transmitting
  */
-void set_command(devreg_t* reg, unsigned int command, int subdevice);
+void setCommand(devreg_t* reg, unsigned int command, int subdevice);
 //returns the line and device of a given device register
-void get_line_dev(devreg_t* reg, int* line, int* dev);
+void getLineDev(devreg_t* reg, int* line, int* dev);
 //gets the status (transm/recv) for a generic device (terminal)
-unsigned int get_status(devreg_t* reg, int subdevice);
-unsigned int tx_status(termreg_t *tp);
-unsigned int rx_status(termreg_t *tp);
+unsigned int getStatus(devreg_t* reg, int subdevice);
+unsigned int txStatus(termreg_t *tp);
+unsigned int rxStatus(termreg_t *tp);
 
 //debug call with key/value pairing
 void debug(int, int);
@@ -55,13 +55,13 @@ void verhogenDevice(int line, unsigned int status, int deviceNumber, int read);
 //sends an ACK to the commandRegister device register
 void ACKDevice(unsigned int* commandRegister);
 //returns true if the pcb pid is in the readyQueue
-int pid_in_readyQ(pcb_t* pid);
+int PIDinReadyQ(pcb_t* pid);
 //set the cpu register reg if != null
-int set_register(unsigned int reg, unsigned int val);
+int setRegister(unsigned int reg, unsigned int val);
 //custom recursive implementation of the base 2 logarithm
 int log2(unsigned int n);
 //keeps set only the lowest set bit
-int lowest_set(int number);
+int lowestSetBit(int number);
 //returns the interrupting device number at line
 int getDeviceNumber(int line);
 

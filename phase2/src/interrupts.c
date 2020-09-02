@@ -6,7 +6,7 @@
 #include "pcb.h"
 
 void interruptHandler() {
-  cpu_time start_time = update_user_time(currentProcess);
+  cpu_time start_time = updateUserTime(currentProcess);
   void* requested_handler = NULL;
   state_t* oldstatus = NULL;
   unsigned int cause;
@@ -43,7 +43,7 @@ void interruptHandler() {
     //unknown cause
     PANIC();
   }
-  critical_wrapper(requested_handler, oldstatus, start_time, currentProcess);
+  criticalWrapper(requested_handler, oldstatus, start_time, currentProcess);
   //return value is unimportant, always return to caller
   scheduler();
 }
@@ -92,8 +92,8 @@ void devHandler(int line, state_t* oldstatus) {
   int read = 0;
   if(line == TERMINAL_LINE) {
     //device is terminal
-    unsigned int recv_status = rx_status(&(deviceReg->term));
-    unsigned int trans_status = tx_status(&(deviceReg->term));
+    unsigned int recv_status = rxStatus(&(deviceReg->term));
+    unsigned int trans_status = txStatus(&(deviceReg->term));
     if((trans_status & TERM_STATUS_MASK) == ST_TRANSMITTED){
       comReg = &(deviceReg->term).transm_command;
       status = trans_status;
