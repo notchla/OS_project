@@ -20,11 +20,12 @@
  *      Modified by Mattia Maldini, Renzo Davoli 2020
  */
 
+#include "p2test_bikaya_v0.3.h"
+
 #ifdef TARGET_UMPS
 #include "umps/libumps.h"
 #include "umps/arch.h"
 #include "umps/types.h"
-#include "p2test_bikaya_v0.3.h"
 #define FRAME_SIZE 4096
 /* Elapsed clock ticks (CPU instructions executed) since system power on.
    Only the "low" part is actually used. */
