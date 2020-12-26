@@ -1,5 +1,5 @@
 # BIKAYA - OS Project 2019/2020 @ UniBo
-BiKaya is an educational operative system based upon a 6 layer abstraction architecture, initially proposed by Dijkstra. This work is part of the operative system couse held at Alma Mater Studiorum, Bologna.
+BiKaya is an educational operative system based upon a 6 layer abstraction architecture, initially proposed by Dijkstra. This work is part of the operative system course held at Alma Mater Studiorum, Bologna.
 
 ## The project
 The final purpose of the project is to present a simple yet fully working kernel, which should be designed to be executed on two different architectures: MIPS and ARM.
